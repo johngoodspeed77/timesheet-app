@@ -80,7 +80,7 @@
               <label>Start <input id="entry-start" type="time" required /></label>
               <label>Finish <input id="entry-end" type="time" required /></label>
             </div>
-            <p class="hint muted">30 min lunch deducted automatically.</p>
+            <p class="hint muted">30 min lunch deducted automatically. Adjust start or finish if your day was different.</p>
             <label>Notes <input id="entry-notes" type="text" placeholder="Optional" /></label>
             <div class="row actions">
               <button type="submit">Save day</button>
@@ -108,6 +108,10 @@
           <label>Boss email
             <input id="boss-email" type="email" placeholder="boss@company.com" required />
           </label>
+          <label>Default start time
+            <input id="default-start" type="time" value="07:00" />
+          </label>
+          <p class="hint muted">New days prefill an 8-hour shift from this start. You can still edit start and finish on each day.</p>
           <div class="row actions">
             <button type="submit">Save settings</button>
             <button type="button" id="back-from-settings" class="ghost">Back</button>

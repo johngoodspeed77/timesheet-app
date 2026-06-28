@@ -10,6 +10,29 @@ export function normalizeDate(value) {
   return s.length >= 10 ? s.slice(0, 10) : s;
 }
 
+/** Clock time from API or input — normalize to HH:MM. */
+export function normalizeTime(value) {
+  if (!value) return '';
+  const s = String(value);
+  return s.length >= 5 ? s.slice(0, 5) : s;
+}
+
+/** Hours on the clock for a default shift (finish = start + this). */
+export const SHIFT_HOURS = 8;
+
+export function addHoursToTime(timeStr, hours) {
+  const total = parseTimeToHours(timeStr) + hours;
+  const wrapped = ((total % 24) + 24) % 24;
+  const h = Math.floor(wrapped);
+  const m = Math.round((wrapped - h) * 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+export function defaultShiftTimes(settings) {
+  const start = normalizeTime(settings?.default_start_time) || '07:00';
+  return { start, end: addHoursToTime(start, SHIFT_HOURS) };
+}
+
 export function formatHours(n) {
   return n.toFixed(2);
 }

@@ -1,11 +1,15 @@
 import { createClient } from '/sdk/index.js';
 import {
   addDays,
+  addHoursToTime,
   calcDay,
   calcWeek,
+  defaultShiftTimes,
   formatDisplayDate,
   formatHours,
   normalizeDate,
+  normalizeTime,
+  SHIFT_HOURS,
   weekStartFor,
 } from '/hours.js';
 
@@ -26,6 +30,7 @@ const state = {
   submissions: [],
   settings: null,
   locked: false,
+  finishManuallyEdited: false,
 };
 
 const els = {
@@ -55,6 +60,7 @@ const els = {
   submitSuccess: document.getElementById('submit-success'),
   employeeName: document.getElementById('employee-name'),
   bossEmail: document.getElementById('boss-email'),
+  defaultStart: document.getElementById('default-start'),
   settingsError: document.getElementById('settings-error'),
   settingsSuccess: document.getElementById('settings-success'),
 };
@@ -175,6 +181,7 @@ async function loadData() {
   if (state.settings) {
     els.employeeName.value = state.settings.employee_name ?? '';
     els.bossEmail.value = state.settings.boss_email ?? '';
+    els.defaultStart.value = normalizeTime(state.settings.default_start_time) || '07:00';
   }
 
   updateWeekUI();
@@ -199,13 +206,25 @@ async function enterApp() {
   }
 }
 
+function applyDefaultShiftToForm() {
+  const { start, end } = defaultShiftTimes(state.settings);
+  els.entryStart.value = start;
+  els.entryEnd.value = end;
+  state.finishManuallyEdited = false;
+}
+
 function loadEntryForm(date) {
   showMsg(els.entryError, '');
   const entry = state.entries.find((e) => normalizeDate(e.work_date) === date);
   els.entryId.value = entry?.id ?? '';
   els.entryDate.value = date;
-  els.entryStart.value = entry?.start_time?.slice(0, 5) ?? '07:00';
-  els.entryEnd.value = entry?.end_time?.slice(0, 5) ?? '15:30';
+  if (entry) {
+    els.entryStart.value = normalizeTime(entry.start_time);
+    els.entryEnd.value = normalizeTime(entry.end_time);
+    state.finishManuallyEdited = true;
+  } else {
+    applyDefaultShiftToForm();
+  }
   els.entryNotes.value = entry?.notes ?? '';
   els.entryFormSection.scrollIntoView({ behavior: 'smooth' });
 }
@@ -213,8 +232,7 @@ function loadEntryForm(date) {
 function clearEntryForm() {
   els.entryId.value = '';
   els.entryDate.value = addDays(state.weekStart, 0);
-  els.entryStart.value = '07:00';
-  els.entryEnd.value = '15:30';
+  applyDefaultShiftToForm();
   els.entryNotes.value = '';
   showMsg(els.entryError, '');
 }
@@ -312,6 +330,15 @@ document.getElementById('delete-entry').addEventListener('click', async () => {
 
 document.getElementById('clear-form').addEventListener('click', clearEntryForm);
 
+els.entryEnd.addEventListener('input', () => {
+  state.finishManuallyEdited = true;
+});
+
+els.entryStart.addEventListener('input', () => {
+  if (state.finishManuallyEdited || els.entryId.value) return;
+  els.entryEnd.value = addHoursToTime(els.entryStart.value, SHIFT_HOURS);
+});
+
 document.getElementById('settings-btn').addEventListener('click', () => {
   els.appPanel.hidden = true;
   els.settingsPanel.hidden = false;
@@ -331,6 +358,7 @@ document.getElementById('settings-form').addEventListener('submit', async (e) =>
     user_id: state.user.id,
     boss_email: els.bossEmail.value.trim(),
     employee_name: els.employeeName.value.trim() || null,
+    default_start_time: els.defaultStart.value || '07:00',
   };
 
   let result;
