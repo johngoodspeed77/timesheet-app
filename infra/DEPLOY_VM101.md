@@ -14,10 +14,22 @@ VM101 is the target host for **SupaDupaBase** (backend) and **Timesheet App** (P
 On VM101 (Proxmox console or SSH):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/johngoodspeed77/timesheet-app/main/infra/setup-vm101.sh | bash
+curl -fsSL https://raw.githubusercontent.com/johngoodspeed77/timesheet-app/main/infra/setup-vm101.sh | bash -s create-env
 ```
 
-First run creates `/opt/supadupabase/.env` from the example and exits — edit secrets, then re-run.
+Enter your **Ubuntu VM login password** when you see `Password:` — that is sudo, not Gmail.
+
+Edit secrets:
+
+```bash
+nano /opt/supadupabase/.env
+```
+
+Deploy:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/johngoodspeed77/timesheet-app/main/infra/setup-vm101.sh | bash
+```
 
 ## Manual steps
 
