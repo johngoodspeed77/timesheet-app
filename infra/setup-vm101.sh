@@ -33,6 +33,10 @@ build_sdk() {
   fi
   echo "==> Building @supadupabase/sdk (not stored in git — compiled on VM)"
   run_in_node "npm install && npm run build -w @supadupabase/sdk"
+  if [[ ! -f "$SDB_DIR/packages/sdk/dist/index.js" ]]; then
+    echo "ERROR: SDK build failed — $SDB_DIR/packages/sdk/dist/index.js missing"
+    exit 1
+  fi
 }
 
 sync_timesheet_sdk() {
@@ -76,8 +80,22 @@ clone_repos() {
   sudo chown -R "$USER:$USER" "$SDB_DIR" "$TS_DIR"
 }
 
+# curl | bash runs a stale copy — re-exec the script pulled to disk
+maybe_reexec_latest() {
+  local mode="${1:-deploy}"
+  if [[ "${SETUP_VM101_REEXEC:-}" == "1" ]]; then
+    return 0
+  fi
+  if [[ -f "$TS_DIR/infra/setup-vm101.sh" ]]; then
+    echo "==> Using latest script from $TS_DIR/infra/setup-vm101.sh"
+    export SETUP_VM101_REEXEC=1
+    exec bash "$TS_DIR/infra/setup-vm101.sh" "$mode"
+  fi
+}
+
 create_env_files() {
   clone_repos
+  maybe_reexec_latest create-env
 
   if [[ ! -f "$SDB_DIR/.env" ]]; then
     cp "$SDB_DIR/infra/env.production.example" "$SDB_DIR/.env"
