@@ -3,6 +3,13 @@ export function parseTimeToHours(time) {
   return h + (m || 0) / 60 + (s || 0) / 3600;
 }
 
+/** API DATE columns may arrive as ISO timestamps — normalize to YYYY-MM-DD. */
+export function normalizeDate(value) {
+  if (!value) return '';
+  const s = String(value);
+  return s.length >= 10 ? s.slice(0, 10) : s;
+}
+
 export function formatHours(n) {
   return n.toFixed(2);
 }
@@ -50,7 +57,7 @@ export function calcDay(workDate, startTime, endTime) {
 }
 
 export function calcWeek(entries, weekStart) {
-  const byDate = new Map(entries.map((e) => [e.work_date, e]));
+  const byDate = new Map(entries.map((e) => [normalizeDate(e.work_date), e]));
   const days = [];
   for (let i = 0; i < 7; i += 1) {
     const date = addDays(weekStart, i);

@@ -5,6 +5,7 @@ import {
   calcWeek,
   formatDisplayDate,
   formatHours,
+  normalizeDate,
   weekStartFor,
 } from '/hours.js';
 
@@ -86,13 +87,18 @@ async function fetchMe() {
 
 function weekEntries() {
   const end = addDays(state.weekStart, 6);
-  return state.entries.filter((e) => e.work_date >= state.weekStart && e.work_date <= end);
+  return state.entries.filter((e) => {
+    const d = normalizeDate(e.work_date);
+    return d >= state.weekStart && d <= end;
+  });
 }
 
 function updateWeekUI() {
   const end = addDays(state.weekStart, 6);
   els.weekLabel.textContent = `${state.weekStart} — ${end}`;
-  state.locked = state.submissions.some((s) => s.week_start === state.weekStart);
+  state.locked = state.submissions.some(
+    (s) => normalizeDate(s.week_start) === state.weekStart,
+  );
   els.lockedBanner.hidden = !state.locked;
   els.entryFormSection.style.opacity = state.locked ? '0.5' : '1';
   els.entryForm.querySelectorAll('input, button').forEach((n) => {
@@ -109,7 +115,7 @@ function updateWeekUI() {
   els.daysList.innerHTML = '';
   for (let i = 0; i < 7; i += 1) {
     const date = addDays(state.weekStart, i);
-    const entry = state.entries.find((e) => e.work_date === date);
+    const entry = state.entries.find((e) => normalizeDate(e.work_date) === date);
     const row = document.createElement('div');
     row.className = 'day-row';
 
@@ -152,8 +158,13 @@ async function loadData() {
   if (entriesRes.error) throw new Error(entriesRes.error.message);
   if (submissionsRes.error) throw new Error(submissionsRes.error.message);
 
-  state.entries = (entriesRes.data ?? []).sort((a, b) => a.work_date.localeCompare(b.work_date));
-  state.submissions = submissionsRes.data ?? [];
+  state.entries = (entriesRes.data ?? [])
+    .map((e) => ({ ...e, work_date: normalizeDate(e.work_date) }))
+    .sort((a, b) => a.work_date.localeCompare(b.work_date));
+  state.submissions = (submissionsRes.data ?? []).map((s) => ({
+    ...s,
+    week_start: normalizeDate(s.week_start),
+  }));
   state.settings = settingsRes.data?.[0] ?? null;
 
   if (state.settings) {
@@ -185,7 +196,7 @@ async function enterApp() {
 
 function loadEntryForm(date) {
   showMsg(els.entryError, '');
-  const entry = state.entries.find((e) => e.work_date === date);
+  const entry = state.entries.find((e) => normalizeDate(e.work_date) === date);
   els.entryId.value = entry?.id ?? '';
   els.entryDate.value = date;
   els.entryStart.value = entry?.start_time?.slice(0, 5) ?? '07:00';
@@ -268,7 +279,10 @@ els.entryForm.addEventListener('submit', async (e) => {
     user_id: state.user.id,
   };
 
-  const id = els.entryId.value;
+  const existing = state.entries.find(
+    (e) => normalizeDate(e.work_date) === els.entryDate.value,
+  );
+  const id = els.entryId.value || existing?.id;
   let result;
   if (id) {
     result = await client.from('time_entries').eq('id', id).update(payload);
