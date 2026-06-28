@@ -37,6 +37,7 @@ const els = {
   weekLabel: document.getElementById('week-label'),
   daysList: document.getElementById('days-list'),
   lockedBanner: document.getElementById('locked-banner'),
+  unlockWeek: document.getElementById('unlock-week'),
   totalWorked: document.getElementById('total-worked'),
   totalRegular: document.getElementById('total-regular'),
   totalOt: document.getElementById('total-ot'),
@@ -100,6 +101,7 @@ function updateWeekUI() {
     (s) => normalizeDate(s.week_start) === state.weekStart,
   );
   els.lockedBanner.hidden = !state.locked;
+  els.unlockWeek.hidden = !state.locked;
   els.entryFormSection.style.opacity = state.locked ? '0.5' : '1';
   els.entryForm.querySelectorAll('input, button').forEach((n) => {
     if (n.id !== 'clear-form') n.disabled = state.locked;
@@ -131,7 +133,7 @@ function updateWeekUI() {
           <span class="muted">OT ${formatHours(day.dailyOt)}</span>
           <span class="paid">${formatHours(day.totalPaid)} paid</span>
         </div>
-        <button type="button" class="ghost sm edit-day" data-date="${date}">Edit</button>
+        <button type="button" class="ghost sm edit-day" data-date="${date}" ${state.locked ? 'disabled' : ''}>Edit</button>
       `;
     } else {
       row.innerHTML = `
@@ -144,7 +146,10 @@ function updateWeekUI() {
   }
 
   els.daysList.querySelectorAll('.edit-day').forEach((btn) => {
-    btn.addEventListener('click', () => loadEntryForm(btn.dataset.date));
+    btn.addEventListener('click', () => {
+      if (state.locked || btn.disabled) return;
+      loadEntryForm(btn.dataset.date);
+    });
   });
 }
 
@@ -337,6 +342,32 @@ document.getElementById('settings-form').addEventListener('submit', async (e) =>
 
   if (result.error) return showMsg(els.settingsError, result.error.message);
   showMsg(els.settingsSuccess, 'Settings saved');
+  await loadData();
+});
+
+function currentSubmission() {
+  return state.submissions.find(
+    (s) => normalizeDate(s.week_start) === state.weekStart,
+  );
+}
+
+els.unlockWeek.addEventListener('click', async () => {
+  showMsg(els.submitError, '');
+  showMsg(els.submitSuccess, '');
+  if (!state.locked) return;
+
+  if (!confirm(`Unlock week ${state.weekStart} for editing? You can submit again later.`)) return;
+
+  const submission = currentSubmission();
+  let result;
+  if (submission?.id) {
+    result = await client.from('week_submissions').eq('id', submission.id).delete();
+  } else {
+    result = await client.from('week_submissions').eq('week_start', state.weekStart).delete();
+  }
+
+  if (result.error) return showMsg(els.submitError, result.error.message);
+  showMsg(els.submitSuccess, 'Week unlocked — you can edit again');
   await loadData();
 });
 
