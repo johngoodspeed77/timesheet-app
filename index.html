@@ -2,7 +2,7 @@
 <html lang="en-NZ">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#06080c" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>Timesheet App</title>
@@ -58,6 +58,7 @@
 
         <section class="card totals">
           <h3>Week totals</h3>
+          <p id="week-hours-hint" class="hint muted"></p>
           <div class="totals-grid">
             <div><span class="label">Hours worked</span><strong id="total-worked">0.00</strong></div>
             <div><span class="label">Regular</span><strong id="total-regular">0.00</strong></div>
@@ -68,6 +69,7 @@
 
         <section class="card">
           <h3>Daily entries</h3>
+          <p class="hint muted">Mon–Fri auto-fill a 40-hour week (8 h/day from your default start, incl. lunch). Edit and Save any day; add Sat/Sun manually.</p>
           <div id="days-list" class="days-list"></div>
         </section>
 
@@ -77,8 +79,8 @@
             <input type="hidden" id="entry-id" />
             <label>Date <input id="entry-date" type="text" inputmode="numeric" placeholder="DD/MM/YYYY" autocomplete="off" required /></label>
             <div class="row">
-              <label>Start <input id="entry-start" type="time" required /></label>
-              <label>Finish <input id="entry-end" type="time" required /></label>
+              <label>Start <input id="entry-start" type="time" step="60" required /></label>
+              <label>Finish <input id="entry-end" type="time" step="60" required /></label>
             </div>
             <p class="hint muted">30 min lunch deducted automatically. Adjust start or finish if your day was different.</p>
             <label>Notes <input id="entry-notes" type="text" placeholder="Optional" /></label>
@@ -109,9 +111,14 @@
             <input id="boss-email" type="email" placeholder="boss@company.com" required />
           </label>
           <label>Default start time
-            <input id="default-start" type="time" value="07:00" />
+            <input id="default-start" type="time" step="60" required />
           </label>
-          <p class="hint muted">New days prefill an 8-hour shift from this start. You can still edit start and finish on each day.</p>
+          <p class="hint muted">Default 8:00 AM start — Mon–Fri auto-fill a 40 h/week (finish includes 30 min lunch). Change this to adjust future auto-filled weeks.</p>
+          <label class="checkbox-row">
+            <input id="weekly-reminder" type="checkbox" />
+            Weekly reminder — Sunday 3:00 PM (NZ time)
+          </label>
+          <p class="hint muted">Enable notifications when prompted. Works best when the app is installed on your phone.</p>
           <div class="row actions">
             <button type="submit">Save settings</button>
             <button type="button" id="back-from-settings" class="ghost">Back</button>

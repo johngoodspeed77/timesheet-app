@@ -36,29 +36,38 @@ export function formatDateRangeNz(startIso, endIso) {
   return `${formatDateNz(startIso)} — ${formatDateNz(endIso)}`;
 }
 
-/** Clock time from API or input — normalize to HH:MM. */
+/** Clock time from API or input — normalize to HH:MM (no timezone shift). */
 export function normalizeTime(value) {
-  if (!value) return '';
+  if (value == null || value === '') return '';
   if (value instanceof Date) {
-    return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
+    return `${String(value.getUTCHours()).padStart(2, '0')}:${String(value.getUTCMinutes()).padStart(2, '0')}`;
   }
-  const s = String(value);
-  if (s.includes('T')) {
-    const timePart = s.split('T')[1] ?? '';
-    return timePart.slice(0, 5);
-  }
-  return s.length >= 5 ? s.slice(0, 5) : s;
+  const s = String(value).trim();
+  const iso = s.match(/T(\d{2}):(\d{2})/);
+  if (iso) return `${iso[1]}:${iso[2]}`;
+  const plain = s.match(/^(\d{1,2}):(\d{2})/);
+  if (plain) return `${plain[1].padStart(2, '0')}:${plain[2]}`;
+  return '';
 }
 
 /** Send TIME columns to the API as HH:MM:SS. */
 export function toApiTime(value) {
   const t = normalizeTime(value);
-  if (!t) return '07:00:00';
-  return t.length === 5 ? `${t}:00` : t;
+  if (!t) return null;
+  return `${t}:00`;
 }
 
-/** Hours on the clock for a default shift (finish = start + this). */
+/** Paid/worked hours for a default shift. */
 export const SHIFT_HOURS = 8;
+
+/** Standard Mon–Fri week: 5 × 8 h worked. */
+export const STANDARD_WEEK_HOURS = 40;
+
+/** Default clock-on time for auto-filled weekdays (Mon 8:00 → 40 h week). */
+export const DEFAULT_START_TIME = '08:00';
+
+/** Lunch break deducted from gross time (see calcDay). */
+export const LUNCH_HOURS = 0.5;
 
 export function addHoursToTime(timeStr, hours) {
   const total = parseTimeToHours(timeStr) + hours;
@@ -68,12 +77,25 @@ export function addHoursToTime(timeStr, hours) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
+/** Default finish on the clock: start + shift + lunch (8h worked after 30 min lunch). */
+export function defaultFinishTime(startStr) {
+  return addHoursToTime(startStr, SHIFT_HOURS + LUNCH_HOURS);
+}
+
 export function defaultShiftTimes(settings, fallbackStart) {
   const start =
     normalizeTime(settings?.default_start_time) ||
     normalizeTime(fallbackStart) ||
-    '07:00';
-  return { start, end: addHoursToTime(start, SHIFT_HOURS) };
+    DEFAULT_START_TIME;
+  return { start, end: defaultFinishTime(start) };
+}
+
+export function weekdayDatesInWeek(weekStart) {
+  const dates = [];
+  for (let i = 0; i < 5; i += 1) {
+    dates.push(addDays(weekStart, i));
+  }
+  return dates;
 }
 
 export function formatHours(n) {
@@ -104,7 +126,7 @@ export function addDays(dateStr, days) {
 
 export function calcDay(workDate, startTime, endTime) {
   const gross = parseTimeToHours(endTime) - parseTimeToHours(startTime);
-  const worked = Math.max(0, gross - 0.5);
+  const worked = Math.max(0, gross - LUNCH_HOURS);
   const rate = dayRate(workDate);
   const regular = Math.min(worked, 8);
   const dailyOt = Math.max(0, worked - 8);

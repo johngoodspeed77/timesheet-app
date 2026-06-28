@@ -1,4 +1,4 @@
-import { createServer } from 'node:http';
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,6 +7,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
 const sdkDir = process.env.SDK_DIR ?? join(rootDir, 'sdk');
 const port = Number(process.env.TIMESHEET_PORT ?? 5180);
+
+const authUpstream = (process.env.SDB_AUTH_UPSTREAM ?? 'http://127.0.0.1:3001').replace(/\/$/, '');
+const dataUpstream = (process.env.SDB_DATA_UPSTREAM ?? 'http://127.0.0.1:3002').replace(/\/$/, '');
+const mailUpstream = (process.env.SDB_MAIL_UPSTREAM ?? 'http://127.0.0.1:3004').replace(/\/$/, '');
 
 const mime: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -21,11 +25,56 @@ const staticFiles: Record<string, string> = {
   '/index.html': 'index.html',
   '/app.js': 'app.js',
   '/hours.js': 'hours.js',
+  '/reminders.js': 'reminders.js',
   '/styles.css': 'styles.css',
   '/manifest.webmanifest': 'manifest.webmanifest',
   '/sw.js': 'sw.js',
   '/config.js': 'config.js',
 };
+
+function proxyUpstream(pathname: string): string | null {
+  if (pathname.startsWith('/auth/')) return authUpstream;
+  if (pathname.startsWith('/rest/')) return dataUpstream;
+  if (pathname.startsWith('/mail/')) return mailUpstream;
+  return null;
+}
+
+async function readBody(req: IncomingMessage): Promise<Buffer | undefined> {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return undefined;
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  if (!chunks.length) return undefined;
+  return Buffer.concat(chunks);
+}
+
+async function proxyRequest(req: IncomingMessage, res: ServerResponse, url: URL): Promise<boolean> {
+  const upstream = proxyUpstream(url.pathname);
+  if (!upstream) return false;
+
+  const targetUrl = `${upstream}${url.pathname}${url.search}`;
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (!value || key === 'host' || key === 'connection') continue;
+    headers.set(key, Array.isArray(value) ? value.join(', ') : value);
+  }
+
+  const body = await readBody(req);
+  const response = await fetch(targetUrl, {
+    method: req.method,
+    headers,
+    body: body?.length ? body : undefined,
+  });
+
+  res.statusCode = response.status;
+  response.headers.forEach((value, key) => {
+    if (key === 'transfer-encoding') return;
+    res.setHeader(key, value);
+  });
+  res.end(Buffer.from(await response.arrayBuffer()));
+  return true;
+}
 
 async function resolveFile(pathname: string): Promise<{ filePath: string; contentType: string } | null> {
   const rel = staticFiles[pathname];
@@ -51,6 +100,8 @@ const server = createServer(async (req, res) => {
       res.end('Bad request');
       return;
     }
+
+    if (await proxyRequest(req, res, url)) return;
 
     const resolved = await resolveFile(pathname);
     if (!resolved) {

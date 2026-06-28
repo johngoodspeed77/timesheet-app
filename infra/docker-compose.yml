@@ -1,15 +1,46 @@
 services:
+
   timesheet-app:
+
     build:
+
       context: ..
+
       dockerfile: infra/Dockerfile
+
     restart: unless-stopped
+
     ports:
+
       - "${TIMESHEET_PORT:-5180}:5180"
+
     environment:
+
       TIMESHEET_PORT: "5180"
-      SDB_PUBLIC_URL: ${SDB_PUBLIC_URL:-http://192.168.1.19}
-      SDB_AUTH_URL: ${SDB_AUTH_URL:-}
-      SDB_DATA_URL: ${SDB_DATA_URL:-}
-      SDB_MAIL_URL: ${SDB_MAIL_URL:-}
+
+      SDB_AUTH_UPSTREAM: http://auth-service:3001
+
+      SDB_DATA_UPSTREAM: http://data-api:3002
+
+      SDB_MAIL_UPSTREAM: http://mail-service:3004
+
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+
       SDK_DIR: /app/sdk
+
+    networks:
+
+      - default
+
+      - sdb
+
+
+
+networks:
+
+  sdb:
+
+    external: true
+
+    name: infra_sdb
+

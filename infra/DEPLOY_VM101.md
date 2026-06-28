@@ -91,3 +91,25 @@ Then `docker compose ... up -d --build` to regenerate `config.js`.
 - VM106 (SupaDupaBase) exists but is **not used** — stack runs on VM101 per plan.
 - SupaDupaBase `deploy.sh` starts: postgres, auth, data-api, **mail-service**, admin, caddy.
 - SMTP must be configured for weekly timesheet email submit.
+
+## Weekly reminder (Sunday 3pm NZ)
+
+1. Generate VAPID keys on VM101 and add to `/opt/supadupabase/.env`:
+
+```bash
+npx web-push generate-vapid-keys
+# Add VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT to .env
+# Copy VAPID_PUBLIC_KEY to /opt/timesheet-app/infra/.env as well
+```
+
+2. In Timesheet App **Settings**, enable **Weekly reminder** and allow notifications when prompted.
+
+3. Schedule Sunday 3:00 PM Pacific/Auckland cron on VM101:
+
+```bash
+sudo crontab -e
+# Add:
+0 15 * * 0 TZ=Pacific/Auckland /opt/supadupabase/infra/send-weekly-reminders.sh >> /var/log/timesheet-reminders.log 2>&1
+```
+
+Requires the PWA to be installed on the phone and reminders enabled in Settings.
