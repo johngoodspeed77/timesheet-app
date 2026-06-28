@@ -17,6 +17,30 @@ docker_compose() {
   fi
 }
 
+run_in_node() {
+  local cmd="$1"
+  if groups | grep -q '\bdocker\b'; then
+    docker run --rm -v "$SDB_DIR:/app" -w /app node:22-alpine sh -c "$cmd"
+  else
+    sudo docker run --rm -v "$SDB_DIR:/app" -w /app node:22-alpine sh -c "$cmd"
+  fi
+}
+
+build_sdk() {
+  if [[ -f "$SDB_DIR/packages/sdk/dist/index.js" ]]; then
+    echo "==> SDK already built"
+    return 0
+  fi
+  echo "==> Building @supadupabase/sdk (not stored in git — compiled on VM)"
+  run_in_node "npm install && npm run build -w @supadupabase/sdk"
+}
+
+sync_timesheet_sdk() {
+  build_sdk
+  mkdir -p "$TS_DIR/sdk"
+  cp -r "$SDB_DIR/packages/sdk/dist/." "$TS_DIR/sdk/"
+}
+
 require_sudo() {
   echo ""
   echo "==> Sudo required — enter your Ubuntu VM login password when prompted"
@@ -114,8 +138,7 @@ fi
 
 clone_repos
 
-mkdir -p "$TS_DIR/sdk"
-cp -r "$SDB_DIR/packages/sdk/dist/." "$TS_DIR/sdk/"
+sync_timesheet_sdk
 
 if [[ ! -f "$SDB_DIR/.env" ]]; then
   create_env_files
