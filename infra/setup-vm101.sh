@@ -46,6 +46,9 @@ sync_timesheet_sdk() {
 }
 
 require_sudo() {
+  if groups | grep -q '\bdocker\b'; then
+    return 0
+  fi
   echo ""
   echo "==> Sudo required — enter your Ubuntu VM login password when prompted"
   echo "    (This is NOT your Gmail password or any .env secret.)"
@@ -175,7 +178,11 @@ if ! grep -q '"migrate": "node dist/migrate.js"' "$SDB_DIR/packages/db/package.j
   exit 1
 fi
 
-DOCKER_SUDO=1 "$SDB_DIR/infra/deploy.sh"
+if groups | grep -q '\bdocker\b'; then
+  "$SDB_DIR/infra/deploy.sh"
+else
+  DOCKER_SUDO=1 "$SDB_DIR/infra/deploy.sh"
+fi
 
 mkdir -p "$TS_DIR/infra"
 cat > "$TS_DIR/infra/.env" <<EOF
