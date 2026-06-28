@@ -2,6 +2,8 @@
 
 Weekly timesheet PWA — log start/finish times Mon–Sun, track overtime, and email your boss at week end. Built on [SupaDupaBase](https://github.com/johngoodspeed77/supadupabase).
 
+**Repository:** https://github.com/johngoodspeed77/timesheet-app *(create with `scripts/create-github-repo.ps1` after `gh auth login`)*
+
 **Production URL (planned):** https://timesheet.whitelynx.co.nz
 
 ## Status
@@ -39,6 +41,15 @@ npm run dev            # http://localhost:5180
 ```
 
 Open http://localhost:5180 — sign up, set boss email in Settings, log days, submit week (requires SMTP in SupaDupaBase `.env`).
+
+## GitHub
+
+```powershell
+gh auth login --web --git-protocol https
+.\scripts\create-github-repo.ps1
+```
+
+Creates `timesheet-app` under your GitHub account, pushes `main`, and tags `v0.1.0-local-mvp`.
 
 ## What it does
 
