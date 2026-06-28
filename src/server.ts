@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
-const sdkDir = join(rootDir, '..', '..', 'Cursor', 'supadupabase', 'packages', 'sdk', 'dist');
+const sdkDir = process.env.SDK_DIR ?? join(rootDir, 'sdk');
 const port = Number(process.env.TIMESHEET_PORT ?? 5180);
 
 const mime: Record<string, string> = {
@@ -24,6 +24,7 @@ const staticFiles: Record<string, string> = {
   '/styles.css': 'styles.css',
   '/manifest.webmanifest': 'manifest.webmanifest',
   '/sw.js': 'sw.js',
+  '/config.js': 'config.js',
 };
 
 async function resolveFile(pathname: string): Promise<{ filePath: string; contentType: string } | null> {
