@@ -13,6 +13,7 @@ import {
   normalizeTime,
   parseDateNz,
   SHIFT_HOURS,
+  toApiTime,
   weekStartFor,
 } from '/hours.js';
 
@@ -171,6 +172,7 @@ async function loadData() {
 
   if (entriesRes.error) throw new Error(entriesRes.error.message);
   if (submissionsRes.error) throw new Error(submissionsRes.error.message);
+  if (settingsRes.error) throw new Error(settingsRes.error.message);
 
   state.entries = (entriesRes.data ?? [])
     .map((e) => ({ ...e, work_date: normalizeDate(e.work_date) }))
@@ -179,15 +181,17 @@ async function loadData() {
     ...s,
     week_start: normalizeDate(s.week_start),
   }));
-  state.settings = settingsRes.data?.[0] ?? null;
-
-  if (state.settings) {
-    els.employeeName.value = state.settings.employee_name ?? '';
-    els.bossEmail.value = state.settings.boss_email ?? '';
-    els.defaultStart.value = normalizeTime(state.settings.default_start_time) || '07:00';
-  }
+  applySettingsToState(settingsRes.data?.[0] ?? null);
 
   updateWeekUI();
+}
+
+function applySettingsToState(row) {
+  state.settings = row;
+  if (!row) return;
+  els.employeeName.value = row.employee_name ?? '';
+  els.bossEmail.value = row.boss_email ?? '';
+  els.defaultStart.value = normalizeTime(row.default_start_time) || '07:00';
 }
 
 async function enterApp() {
@@ -210,7 +214,7 @@ async function enterApp() {
 }
 
 function applyDefaultShiftToForm() {
-  const { start, end } = defaultShiftTimes(state.settings);
+  const { start, end } = defaultShiftTimes(state.settings, els.defaultStart.value);
   els.entryStart.value = start;
   els.entryEnd.value = end;
   state.finishManuallyEdited = false;
@@ -347,9 +351,18 @@ els.entryStart.addEventListener('input', () => {
   els.entryEnd.value = addHoursToTime(els.entryStart.value, SHIFT_HOURS);
 });
 
-document.getElementById('settings-btn').addEventListener('click', () => {
+document.getElementById('settings-btn').addEventListener('click', async () => {
   els.appPanel.hidden = true;
   els.settingsPanel.hidden = false;
+  showMsg(els.settingsError, '');
+  showMsg(els.settingsSuccess, '');
+  try {
+    const settingsRes = await client.from('user_settings').select('*');
+    if (settingsRes.error) throw new Error(settingsRes.error.message);
+    applySettingsToState(settingsRes.data?.[0] ?? null);
+  } catch (err) {
+    showMsg(els.settingsError, err.message ?? 'Failed to load settings');
+  }
 });
 
 document.getElementById('back-from-settings').addEventListener('click', () => {
@@ -366,7 +379,7 @@ document.getElementById('settings-form').addEventListener('submit', async (e) =>
     user_id: state.user.id,
     boss_email: els.bossEmail.value.trim(),
     employee_name: els.employeeName.value.trim() || null,
-    default_start_time: els.defaultStart.value || '07:00',
+    default_start_time: toApiTime(els.defaultStart.value),
   };
 
   let result;
@@ -377,6 +390,15 @@ document.getElementById('settings-form').addEventListener('submit', async (e) =>
   }
 
   if (result.error) return showMsg(els.settingsError, result.error.message);
+
+  const savedRow = Array.isArray(result.data) ? result.data[0] : result.data;
+  if (savedRow) {
+    applySettingsToState(savedRow);
+  } else {
+    state.settings = { ...payload };
+    els.defaultStart.value = normalizeTime(payload.default_start_time);
+  }
+
   showMsg(els.settingsSuccess, 'Settings saved');
   await loadData();
 });

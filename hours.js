@@ -39,8 +39,22 @@ export function formatDateRangeNz(startIso, endIso) {
 /** Clock time from API or input — normalize to HH:MM. */
 export function normalizeTime(value) {
   if (!value) return '';
+  if (value instanceof Date) {
+    return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
+  }
   const s = String(value);
+  if (s.includes('T')) {
+    const timePart = s.split('T')[1] ?? '';
+    return timePart.slice(0, 5);
+  }
   return s.length >= 5 ? s.slice(0, 5) : s;
+}
+
+/** Send TIME columns to the API as HH:MM:SS. */
+export function toApiTime(value) {
+  const t = normalizeTime(value);
+  if (!t) return '07:00:00';
+  return t.length === 5 ? `${t}:00` : t;
 }
 
 /** Hours on the clock for a default shift (finish = start + this). */
@@ -54,8 +68,11 @@ export function addHoursToTime(timeStr, hours) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-export function defaultShiftTimes(settings) {
-  const start = normalizeTime(settings?.default_start_time) || '07:00';
+export function defaultShiftTimes(settings, fallbackStart) {
+  const start =
+    normalizeTime(settings?.default_start_time) ||
+    normalizeTime(fallbackStart) ||
+    '07:00';
   return { start, end: addHoursToTime(start, SHIFT_HOURS) };
 }
 
