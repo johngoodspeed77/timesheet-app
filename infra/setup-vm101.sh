@@ -25,25 +25,45 @@ require_sudo() {
   sudo -v
 }
 
+ensure_repo() {
+  local repo_url="$1"
+  local dir="$2"
+
+  if [[ -d "$dir/.git" ]]; then
+    echo "==> Updating $(basename "$dir")"
+    git -C "$dir" pull --ff-only || true
+    return 0
+  fi
+
+  if [[ -e "$dir" ]]; then
+    echo "==> Removing incomplete $(basename "$dir") at $dir"
+    sudo rm -rf "$dir"
+  fi
+
+  echo "==> Cloning $(basename "$dir")"
+  git clone "$repo_url" "$dir"
+}
+
+clone_repos() {
+  sudo mkdir -p /opt
+  sudo chown "$USER:$USER" /opt 2>/dev/null || true
+  ensure_repo "$SDB_REPO" "$SDB_DIR"
+  ensure_repo "$TS_REPO" "$TS_DIR"
+  sudo chown -R "$USER:$USER" "$SDB_DIR" "$TS_DIR"
+}
+
 create_env_files() {
-  require_sudo
-  sudo mkdir -p "$SDB_DIR" "$TS_DIR/infra"
-  sudo chown "$USER:$USER" "$SDB_DIR" "$TS_DIR"
+  clone_repos
 
   if [[ ! -f "$SDB_DIR/.env" ]]; then
-    if [[ -d "$SDB_DIR/infra" ]]; then
-      cp "$SDB_DIR/infra/env.production.example" "$SDB_DIR/.env"
-    else
-      echo "Clone supadupabase first, then run: $0 create-env"
-      exit 1
-    fi
+    cp "$SDB_DIR/infra/env.production.example" "$SDB_DIR/.env"
     echo "Created $SDB_DIR/.env"
   else
     echo "$SDB_DIR/.env already exists"
   fi
 
+  mkdir -p "$TS_DIR/infra"
   if [[ ! -f "$TS_DIR/infra/.env" ]]; then
-    mkdir -p "$TS_DIR/infra"
     cat > "$TS_DIR/infra/.env" <<EOF
 SDB_PUBLIC_URL=http://${VM_IP}
 TIMESHEET_PORT=5180
@@ -63,6 +83,7 @@ EOF
 
 case "${1:-deploy}" in
   create-env)
+    require_sudo
     create_env_files
     exit 0
     ;;
@@ -87,24 +108,11 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 
 if ! groups | grep -q '\bdocker\b'; then
-  echo "==> Adding $USER to docker group (optional — script uses sudo docker until re-login)"
+  echo "==> Adding $USER to docker group (script uses sudo docker until re-login)"
   sudo usermod -aG docker "$USER" || true
 fi
 
-sudo mkdir -p "$SDB_DIR" "$TS_DIR"
-sudo chown "$USER:$USER" "$SDB_DIR" "$TS_DIR"
-
-if [[ ! -d "$SDB_DIR/.git" ]]; then
-  git clone "$SDB_REPO" "$SDB_DIR"
-else
-  git -C "$SDB_DIR" pull --ff-only || true
-fi
-
-if [[ ! -d "$TS_DIR/.git" ]]; then
-  git clone "$TS_REPO" "$TS_DIR"
-else
-  git -C "$TS_DIR" pull --ff-only || true
-fi
+clone_repos
 
 mkdir -p "$TS_DIR/sdk"
 cp -r "$SDB_DIR/packages/sdk/dist/." "$TS_DIR/sdk/"
