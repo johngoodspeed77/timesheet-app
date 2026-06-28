@@ -59,7 +59,9 @@ ensure_repo() {
 
   if [[ -d "$dir/.git" ]]; then
     echo "==> Updating $(basename "$dir")"
-    git -C "$dir" pull --ff-only || true
+    git -C "$dir" fetch origin main
+    git -C "$dir" merge --ff-only origin/main
+    echo "    at $(git -C "$dir" rev-parse --short HEAD)"
     return 0
   fi
 
@@ -155,6 +157,7 @@ if ! groups | grep -q '\bdocker\b'; then
 fi
 
 clone_repos
+maybe_reexec_latest deploy
 
 sync_timesheet_sdk
 
@@ -163,7 +166,15 @@ if [[ ! -f "$SDB_DIR/.env" ]]; then
   exit 1
 fi
 
-chmod +x "$SDB_DIR/infra/deploy.sh"
+chmod +x "$SDB_DIR/infra/deploy.sh" "$SDB_DIR/infra/migrate.sh"
+
+if ! grep -q '"migrate": "node dist/migrate.js"' "$SDB_DIR/packages/db/package.json"; then
+  echo "ERROR: /opt/supadupabase is outdated (migrate still uses tsx)."
+  echo "Run on VM101:"
+  echo "  cd /opt/supadupabase && git fetch origin && git reset --hard origin/main"
+  exit 1
+fi
+
 DOCKER_SUDO=1 "$SDB_DIR/infra/deploy.sh"
 
 mkdir -p "$TS_DIR/infra"
