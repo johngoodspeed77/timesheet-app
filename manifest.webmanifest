@@ -1,0 +1,9 @@
+{
+  "name": "Timesheet App",
+  "short_name": "Timesheet",
+  "description": "Log weekly hours and email your timesheet to your boss.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#06080c",
+  "theme_color": "#22d3ee"
+}

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#06080c" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>Timesheet App</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="shell">
+    <header>
+      <div class="brand"><span class="hex"></span> Timesheet App</div>
+      <span id="status" class="muted">Signed out</span>
+    </header>
+
+    <main>
+      <section id="auth-panel" class="card">
+        <h1>Timesheet App</h1>
+        <p class="muted">Log your hours Mon–Sun and email your boss at week end.</p>
+
+        <form id="signup-form">
+          <h2>Sign up</h2>
+          <input id="su-email" type="email" placeholder="Email" required autocomplete="username" />
+          <input id="su-password" type="password" placeholder="Password (8+)" minlength="8" required autocomplete="new-password" />
+          <button type="submit">Create account</button>
+        </form>
+
+        <form id="login-form">
+          <h2>Sign in</h2>
+          <input id="li-email" type="email" placeholder="Email" required autocomplete="username" />
+          <input id="li-password" type="password" placeholder="Password" required autocomplete="current-password" />
+          <button type="submit">Sign in</button>
+          <button type="button" id="google-btn" class="ghost">Google</button>
+        </form>
+
+        <div id="auth-error" class="error" hidden></div>
+      </section>
+
+      <section id="app-panel" hidden>
+        <div class="toolbar card">
+          <div class="week-nav">
+            <button type="button" id="prev-week" class="ghost sm">← Prev</button>
+            <h2 id="week-label">Week</h2>
+            <button type="button" id="next-week" class="ghost sm">Next →</button>
+          </div>
+          <div class="toolbar-actions">
+            <button type="button" id="settings-btn" class="ghost sm">Settings</button>
+            <button type="button" id="logout-btn" class="ghost sm">Logout</button>
+          </div>
+        </div>
+
+        <div id="locked-banner" class="banner" hidden>Week submitted — no further edits.</div>
+
+        <section class="card totals">
+          <h3>Week totals</h3>
+          <div class="totals-grid">
+            <div><span class="label">Hours worked</span><strong id="total-worked">0.00</strong></div>
+            <div><span class="label">Regular</span><strong id="total-regular">0.00</strong></div>
+            <div><span class="label">Overtime</span><strong id="total-ot">0.00</strong></div>
+            <div><span class="label">Paid equivalent</span><strong id="total-paid">0.00</strong></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3>Daily entries</h3>
+          <div id="days-list" class="days-list"></div>
+        </section>
+
+        <section id="entry-form-section" class="card">
+          <h3 id="entry-form-title">Add / edit day</h3>
+          <form id="entry-form">
+            <input type="hidden" id="entry-id" />
+            <label>Date <input id="entry-date" type="date" required /></label>
+            <div class="row">
+              <label>Start <input id="entry-start" type="time" required /></label>
+              <label>Finish <input id="entry-end" type="time" required /></label>
+            </div>
+            <p class="hint muted">30 min lunch deducted automatically.</p>
+            <label>Notes <input id="entry-notes" type="text" placeholder="Optional" /></label>
+            <div class="row actions">
+              <button type="submit">Save day</button>
+              <button type="button" id="delete-entry" class="ghost">Delete</button>
+              <button type="button" id="clear-form" class="ghost">Clear</button>
+            </div>
+          </form>
+          <div id="entry-error" class="error" hidden></div>
+        </section>
+
+        <section class="card submit-section">
+          <button type="button" id="submit-week">Send timesheet to boss</button>
+          <p class="hint muted">Locks this week after the email is sent.</p>
+          <div id="submit-error" class="error" hidden></div>
+          <div id="submit-success" class="success" hidden></div>
+        </section>
+      </section>
+
+      <section id="settings-panel" class="card" hidden>
+        <h2>Settings</h2>
+        <form id="settings-form">
+          <label>Your name (for emails)
+            <input id="employee-name" type="text" placeholder="Jane Smith" />
+          </label>
+          <label>Boss email
+            <input id="boss-email" type="email" placeholder="boss@company.com" required />
+          </label>
+          <div class="row actions">
+            <button type="submit">Save settings</button>
+            <button type="button" id="back-from-settings" class="ghost">Back</button>
+          </div>
+        </form>
+        <div id="settings-error" class="error" hidden></div>
+        <div id="settings-success" class="success" hidden></div>
+      </section>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
