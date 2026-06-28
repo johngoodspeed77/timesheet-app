@@ -10,6 +10,32 @@ export function normalizeDate(value) {
   return s.length >= 10 ? s.slice(0, 10) : s;
 }
 
+/** Display date in New Zealand format (DD/MM/YYYY). */
+export function formatDateNz(isoDate) {
+  const iso = normalizeDate(isoDate);
+  if (!iso || iso.length < 10) return iso || '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+/** Parse DD/MM/YYYY to ISO YYYY-MM-DD for API storage. */
+export function parseDateNz(nzDate) {
+  const m = String(nzDate ?? '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  const dd = Number(m[1]);
+  const mm = Number(m[2]);
+  const yyyy = Number(m[3]);
+  if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return null;
+  const iso = `${yyyy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+  const d = new Date(`${iso}T12:00:00`);
+  if (d.getFullYear() !== yyyy || d.getMonth() + 1 !== mm || d.getDate() !== dd) return null;
+  return iso;
+}
+
+export function formatDateRangeNz(startIso, endIso) {
+  return `${formatDateNz(startIso)} — ${formatDateNz(endIso)}`;
+}
+
 /** Clock time from API or input — normalize to HH:MM. */
 export function normalizeTime(value) {
   if (!value) return '';
@@ -101,6 +127,6 @@ export function calcWeek(entries, weekStart) {
 export const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export function formatDisplayDate(dateStr) {
-  const d = new Date(`${dateStr}T12:00:00`);
-  return `${DAY_NAMES[d.getDay()]} ${dateStr}`;
+  const d = new Date(`${normalizeDate(dateStr)}T12:00:00`);
+  return `${DAY_NAMES[d.getDay()]} ${formatDateNz(dateStr)}`;
 }

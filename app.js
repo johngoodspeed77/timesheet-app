@@ -6,9 +6,12 @@ import {
   calcWeek,
   defaultShiftTimes,
   formatDisplayDate,
+  formatDateNz,
+  formatDateRangeNz,
   formatHours,
   normalizeDate,
   normalizeTime,
+  parseDateNz,
   SHIFT_HOURS,
   weekStartFor,
 } from '/hours.js';
@@ -102,7 +105,7 @@ function weekEntries() {
 
 function updateWeekUI() {
   const end = addDays(state.weekStart, 6);
-  els.weekLabel.textContent = `${state.weekStart} — ${end}`;
+  els.weekLabel.textContent = formatDateRangeNz(state.weekStart, end);
   state.locked = state.submissions.some(
     (s) => normalizeDate(s.week_start) === state.weekStart,
   );
@@ -217,7 +220,7 @@ function loadEntryForm(date) {
   showMsg(els.entryError, '');
   const entry = state.entries.find((e) => normalizeDate(e.work_date) === date);
   els.entryId.value = entry?.id ?? '';
-  els.entryDate.value = date;
+  els.entryDate.value = formatDateNz(date);
   if (entry) {
     els.entryStart.value = normalizeTime(entry.start_time);
     els.entryEnd.value = normalizeTime(entry.end_time);
@@ -231,7 +234,7 @@ function loadEntryForm(date) {
 
 function clearEntryForm() {
   els.entryId.value = '';
-  els.entryDate.value = addDays(state.weekStart, 0);
+  els.entryDate.value = formatDateNz(addDays(state.weekStart, 0));
   applyDefaultShiftToForm();
   els.entryNotes.value = '';
   showMsg(els.entryError, '');
@@ -294,8 +297,13 @@ els.entryForm.addEventListener('submit', async (e) => {
   if (state.locked) return;
   showMsg(els.entryError, '');
 
+  const workDate = parseDateNz(els.entryDate.value);
+  if (!workDate) {
+    return showMsg(els.entryError, 'Enter date as DD/MM/YYYY');
+  }
+
   const payload = {
-    work_date: els.entryDate.value,
+    work_date: workDate,
     start_time: els.entryStart.value,
     end_time: els.entryEnd.value,
     notes: els.entryNotes.value || null,
@@ -303,7 +311,7 @@ els.entryForm.addEventListener('submit', async (e) => {
   };
 
   const existing = state.entries.find(
-    (e) => normalizeDate(e.work_date) === els.entryDate.value,
+    (e) => normalizeDate(e.work_date) === workDate,
   );
   const id = els.entryId.value || existing?.id;
   let result;
@@ -384,7 +392,7 @@ els.unlockWeek.addEventListener('click', async () => {
   showMsg(els.submitSuccess, '');
   if (!state.locked) return;
 
-  if (!confirm(`Unlock week ${state.weekStart} for editing? You can submit again later.`)) return;
+  if (!confirm(`Unlock week ${formatDateRangeNz(state.weekStart, addDays(state.weekStart, 6))} for editing? You can submit again later.`)) return;
 
   const submission = currentSubmission();
   let result;
@@ -407,7 +415,7 @@ els.submitWeek.addEventListener('click', async () => {
     return showMsg(els.submitError, 'Set your boss email in Settings first');
   }
 
-  if (!confirm(`Send timesheet for week ${state.weekStart}? This will lock the week.`)) return;
+  if (!confirm(`Send timesheet for week ${formatDateRangeNz(state.weekStart, addDays(state.weekStart, 6))}? This will lock the week.`)) return;
 
   const res = await fetch(`${MAIL_URL}/mail/timesheet/submit`, {
     method: 'POST',
