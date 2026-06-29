@@ -21,9 +21,11 @@ import {
   formatDateNz,
   formatDateRangeNz,
   formatHours,
+  LUNCH_HOURS,
   normalizeDate,
   normalizeTime,
   parseDateNz,
+  parseTimeToHours,
   STANDARD_WEEK_HOURS,
   toApiTime,
   weekdayDatesInWeek,
@@ -216,13 +218,21 @@ function updateWeekUI() {
 
     if (entry) {
       const day = calcDay(date, entry.start_time, entry.end_time);
+      const start = normalizeTime(entry.start_time);
+      const end = normalizeTime(entry.end_time);
+      const gross = parseTimeToHours(end) - parseTimeToHours(start);
+      const lunchHint =
+        gross > day.worked
+          ? `<span class="muted day-lunch-hint">${formatHours(gross)}h − ${formatHours(LUNCH_HOURS)} lunch</span>`
+          : '';
       row.innerHTML = `
         <div class="day-info">
           <strong>${formatDisplayDate(date)}</strong>
-          <span class="muted">${normalizeTime(entry.start_time)} – ${normalizeTime(entry.end_time)}</span>
+          <span class="muted">${start} – ${end}</span>
         </div>
         <div class="day-stats">
           <span>${formatHours(day.worked)}h</span>
+          ${lunchHint}
           <span class="muted">OT ${formatHours(day.dailyOt)}</span>
           <span class="paid">${formatHours(day.totalPaid)} paid</span>
         </div>
@@ -482,8 +492,8 @@ els.entryForm.addEventListener('submit', async (e) => {
   }
 
   if (result.error) return showMsg(els.entryError, result.error.message);
-  clearEntryForm();
   await loadData();
+  loadEntryForm(workDate);
 });
 
 document.getElementById('delete-entry').addEventListener('click', async () => {

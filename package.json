@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "node --test hours.test.js"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

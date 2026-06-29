@@ -76,6 +76,8 @@ button {
 }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 button.ghost { background: transparent; color: var(--cyan); border: 1px solid var(--cyan); }
+button.ghost.danger { color: #f87171; border-color: #f87171; }
+button.ghost.danger:hover { background: rgba(248, 113, 113, 0.08); }
 button.sm { width: auto; min-height: 40px; padding: 0.4rem 0.75rem; font-size: 0.875rem; }
 
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
@@ -91,7 +93,20 @@ button.sm { width: auto; min-height: 40px; padding: 0.4rem 0.75rem; font-size: 0
 }
 .week-nav { display: flex; align-items: center; gap: 0.75rem; }
 .week-nav h2 { margin: 0; font-size: 1rem; }
-.toolbar-actions { display: flex; gap: 0.5rem; }
+.toolbar-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.toolbar-actions--top { margin-left: auto; justify-content: flex-end; }
+.toolbar-actions--top button { white-space: nowrap; }
+
+.footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+.footer-actions button { width: auto; }
+.app-footer-actions { padding: 0.75rem 1.25rem; }
+
+.submit-section button { margin-top: 0.5rem; }
 
 .banner {
   background: #422006; border: 1px solid #92400e; color: #fcd34d;
@@ -129,6 +144,7 @@ button.sm { width: auto; min-height: 40px; padding: 0.4rem 0.75rem; font-size: 0
   min-width: 0;
 }
 .day-stats .paid { color: var(--cyan); }
+.day-stats .day-lunch-hint { flex: 1 1 100%; font-size: 0.75rem; }
 
 .submit-section button { margin-top: 0.5rem; }
 
@@ -163,6 +179,28 @@ h1, h2, h3 { margin-top: 0; }
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .toolbar-actions--top {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .toolbar-actions--top button {
+    width: 100%;
+  }
+
+  .footer-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .footer-actions button { width: 100%; }
+
+  .footer-actions #logout-btn {
+    grid-column: 1 / -1;
   }
 
   .toolbar-actions {

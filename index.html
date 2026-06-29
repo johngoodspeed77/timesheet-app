@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#06080c" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>Timesheet App</title>
-    <link rel="stylesheet" href="/styles.css?v=2" />
+    <link rel="stylesheet" href="/styles.css?v=3" />
     <script src="/config.js"></script>
   </head>
   <body class="shell">
@@ -55,12 +55,13 @@
             <h2 id="week-label">Week</h2>
             <button type="button" id="next-week" class="ghost sm">Next →</button>
           </div>
-          <div class="toolbar-actions">
-            <button type="button" id="unlock-week" class="ghost sm" hidden>Unlock week</button>
-            <button type="button" id="settings-btn" class="ghost sm">Settings</button>
-            <button type="button" id="logout-btn" class="ghost sm">Logout</button>
+          <div class="toolbar-actions toolbar-actions--top">
+            <button type="button" id="submit-week" class="sm">Send timesheet to boss</button>
           </div>
         </div>
+
+        <div id="submit-error" class="error" hidden></div>
+        <div id="submit-success" class="success" hidden></div>
 
         <div id="locked-banner" class="banner" hidden>
           Week submitted — no further edits until you unlock.
@@ -103,11 +104,12 @@
           <div id="entry-error" class="error" hidden></div>
         </section>
 
-        <section class="card submit-section">
-          <button type="button" id="submit-week">Send timesheet to boss</button>
-          <p class="hint muted">Locks this week after the email is sent.</p>
-          <div id="submit-error" class="error" hidden></div>
-          <div id="submit-success" class="success" hidden></div>
+        <section class="card app-footer-actions">
+          <div class="footer-actions">
+            <button type="button" id="unlock-week" class="ghost sm" hidden>Unlock week</button>
+            <button type="button" id="settings-btn" class="ghost sm">Settings</button>
+            <button type="button" id="logout-btn" class="ghost sm danger">Logout</button>
+          </div>
         </section>
       </section>
 
