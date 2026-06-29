@@ -4,26 +4,24 @@ Weekly timesheet PWA — log start/finish times Mon–Sun, track overtime, and e
 
 **Repository:** https://github.com/johngoodspeed77/timesheet-app
 
-**Production (VM101):** http://192.168.1.19:5180 *(LAN)*
-
-**Production URL (planned):** https://timesheet.whitelynx.co.nz
+**Production:** https://timesheet.whitelynx.co.nz *(VM101)* → backend https://supadupabase.whitelynx.co.nz *(VM106)*
 
 ## Status
 
-**Deployed on VM101** — auth, timesheet CRUD, week submit, Mon–Fri auto-fill, and weekly reminders are live on the LAN. Public hostname and production SMTP still pending.
+**Option B live** — Timesheet PWA on VM101; SupaDupaBase on VM106. Open both repos via `whitelynx.code-workspace` in Cursor.
 
 | Done | Pending |
 |------|---------|
-| PWA UI (auth, week view, entries, settings, submit) | Cloudflare Tunnel → `timesheet.whitelynx.co.nz` |
-| Mon–Fri auto-fill (8:00 start, 40 h week, 30 min lunch) | Google OAuth redirect for production origin |
-| Mobile-responsive layout | End-to-end email test with real SMTP on VM |
-| Same-origin API proxy on `:5180` (`/auth`, `/rest`, `/mail`) | Data API date-range filters (`gte`/`lte`) |
-| Weekly reminder (Sunday 3pm NZ) — push + local fallback | RLS / submit integration tests |
-| VM101 deploy ([infra/DEPLOY_VM101.md](./infra/DEPLOY_VM101.md)) | |
+| PWA + tunnel `timesheet.whitelynx.co.nz` | VM101 redeploy with Option B `.env` |
+| Option B config (`SDB_PUBLIC_URL`, `SDB_PROXY=0`) | VM106 migration `007` |
+| Persistent login (`lib/session.js`) | Google OAuth for production origin |
+| Mon–Fri auto-fill, week submit, reminders | SMTP e2e on VM106 |
 
-Details: [SAVEPOINT.md](./SAVEPOINT.md) · Handoff: [AGENT_HANDOFF.md](./AGENT_HANDOFF.md)
+Details: [SAVEPOINT.md](./SAVEPOINT.md) · Handoff: [AGENT_HANDOFF.md](./AGENT_HANDOFF.md) · Stack: [SupaDupaBase STACK.md](../Cursor/supadupabase/docs/STACK.md)
 
 ## Quick start (local)
+
+Open **`E:\White Lynx Projects\Cursor\whitelynx.code-workspace`** in Cursor to edit both repos.
 
 ### 1. Start SupaDupaBase
 
@@ -57,7 +55,7 @@ cd /opt/timesheet-app
 DOCKER_BUILDKIT=0 docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build timesheet-app
 ```
 
-On VM, auth/data/mail are proxied through the timesheet container (same origin). Local dev still uses separate ports via `config.js`.
+On VM101 the PWA is static-only; API calls go to VM106. Local dev uses separate ports via `config.js`.
 
 ## What it does
 

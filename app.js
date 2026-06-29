@@ -1,5 +1,11 @@
 import { createClient } from '/sdk/index.js';
 import {
+  loadTokens,
+  saveTokens,
+  clearTokens,
+  restoreAuthSession,
+} from '/lib/session.js';
+import {
   maybeShowLocalWeeklyReminder,
   subscribeWeeklyReminder,
   unsubscribeWeeklyReminder,
@@ -33,10 +39,11 @@ const AUTH_URL = apiBase(window.__SDB_AUTH_URL);
 const DATA_URL = apiBase(window.__SDB_DATA_URL);
 const MAIL_URL = apiBase(window.__SDB_MAIL_URL);
 
+const initialTokens = loadTokens();
 const client = createClient({
   url: DATA_URL,
   authUrl: AUTH_URL,
-  accessToken: sessionStorage.getItem('sdb_access_token') ?? undefined,
+  accessToken: initialTokens.accessToken ?? undefined,
 });
 
 const state = {
@@ -89,42 +96,14 @@ function showMsg(el, msg) {
 }
 
 function persistSession(session) {
-  sessionStorage.setItem('sdb_access_token', session.access_token);
-  sessionStorage.setItem('sdb_refresh_token', session.refresh_token);
+  saveTokens(session.access_token, session.refresh_token);
   client.setAccessToken(session.access_token);
 }
 
 function clearSession() {
-  sessionStorage.removeItem('sdb_access_token');
-  sessionStorage.removeItem('sdb_refresh_token');
+  clearTokens();
   client.setAccessToken(null);
   state.user = null;
-}
-
-async function fetchMe() {
-  const token = client.getAccessToken();
-  if (!token) return { user: null, error: 'Not signed in' };
-
-  let res;
-  try {
-    res = await fetch(`${AUTH_URL}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  } catch (err) {
-    return { user: null, error: err.message ?? 'Network error' };
-  }
-
-  let body = {};
-  try {
-    body = await res.json();
-  } catch {
-    body = {};
-  }
-
-  if (!res.ok) {
-    return { user: null, error: body.message ?? 'Session invalid' };
-  }
-  return { user: body.user ?? null, error: body.user ? null : 'User not found' };
 }
 
 function showAuthPanel() {
@@ -297,16 +276,16 @@ async function enterApp() {
   showMsg(els.authError, '');
   showMsg(els.entryError, '');
 
-  const me = await fetchMe();
-  if (!me.user) {
+  const restored = await restoreAuthSession(AUTH_URL);
+  if (!restored) {
     clearSession();
     showAuthPanel();
-    showMsg(els.authError, me.error ?? 'Could not verify your session. Sign in again.');
     return;
   }
 
-  state.user = me.user;
-  els.status.textContent = me.user.email;
+  client.setAccessToken(restored.accessToken);
+  state.user = restored.user;
+  els.status.textContent = restored.user.email;
 
   try {
     await loadData();
@@ -423,7 +402,8 @@ document.getElementById('google-btn').addEventListener('click', () => {
 });
 
 document.getElementById('logout-btn').addEventListener('click', async () => {
-  await client.auth.signOut(sessionStorage.getItem('sdb_refresh_token') ?? undefined);
+  const { refreshToken } = loadTokens();
+  await client.auth.signOut(refreshToken ?? undefined);
   clearSession();
   els.authPanel.hidden = false;
   els.appPanel.hidden = true;
@@ -645,7 +625,7 @@ if (params.get('access_token')) {
   });
   window.history.replaceState({}, '', window.location.pathname);
   enterApp();
-} else if (client.getAccessToken()) {
+} else if (initialTokens.accessToken || initialTokens.refreshToken) {
   enterApp().catch((err) => {
     clearSession();
     showAuthPanel();

@@ -6,22 +6,26 @@
 
 **Timesheet App** is a self-hosted PWA for multiple employees to log weekly hours and email a timesheet to their boss. It uses **SupaDupaBase** for auth, data storage (Postgres + RLS), and weekly email submission.
 
-**Workspace folder:** `E:\White Lynx Projects\Work Stuff\Timeshhet App`
+**Workspace folder:** `E:\White Lynx Projects\Work Stuff\Timeshhet App`  
+**Cursor (both repos):** `E:\White Lynx Projects\Cursor\whitelynx.code-workspace`
 
 **Backend repo:** `E:\White Lynx Projects\Cursor\supadupabase` · GitHub: `johngoodspeed77/supadupabase`
 
 **GitHub (this repo):** `johngoodspeed77/timesheet-app`
 
-## Current stage — VM101 LAN deploy (2026-06-28)
+## Current stage — Option B split-VM (2026-06-29)
 
-**Live on LAN:** http://192.168.1.19:5180 (Proxmox VM101, user `johngoodspeed`)
+**Timesheet (VM101):** https://timesheet.whitelynx.co.nz · LAN http://192.168.1.19:5180  
+**SupaDupaBase (VM106):** https://supadupabase.whitelynx.co.nz · `192.168.1.112`
 
-SupaDupaBase stack runs on the same VM (`192.168.1.19:80` via Caddy). Timesheet App Docker container joins `infra_sdb` network and **proxies** `/auth/*`, `/rest/*`, `/mail/*` so the browser uses same-origin requests.
+Browser loads PWA from VM101; auth/data/mail call VM106 directly (`SDB_PROXY=0`).  
+**One Cursor workspace:** `E:\White Lynx Projects\Cursor\whitelynx.code-workspace`
 
 ### Completed since v0.1.0-local-mvp
 
-- [x] VM101 deployment — [infra/DEPLOY_VM101.md](./infra/DEPLOY_VM101.md), `infra/docker-compose.yml`, `src/server.ts` proxy
-- [x] Same-origin config via `infra/entrypoint.sh` (empty `__SDB_*_URL` → `window.location.origin`)
+- [x] **Option B** — Timesheet VM101 + SupaDupaBase VM106; `config.js` → `https://supadupabase.whitelynx.co.nz`
+- [x] Cloudflare tunnel — `timesheet.whitelynx.co.nz`
+- [x] Persistent login — `lib/session.js` (localStorage + refresh)
 - [x] Default shift: **8:00 AM start**, finish **16:30** on clock (8 h worked after 30 min lunch)
 - [x] **Mon–Fri auto-fill** for current week (`ensureDefaultWeekdayEntries` in `app.js`); Sat/Sun manual
 - [x] Mobile-responsive CSS (safe areas, 44px tap targets, stacked toolbar/day rows)
@@ -44,12 +48,10 @@ SupaDupaBase stack runs on the same VM (`192.168.1.19:80` via Caddy). Timesheet 
 
 ### Not done / follow-up
 
-- [ ] **Cloudflare Tunnel** — add public hostname `timesheet.whitelynx.co.nz` → `http://192.168.1.19:5180` in Zero Trust (see DEPLOY_VM101.md). `supadupabase.whitelynx.co.nz` is already public; timesheet DNS not created yet.
-- [ ] **VM101 cloudflared token** — container reports invalid `TUNNEL_TOKEN` (public URL may use another tunnel instance); refresh token if needed.
-- [x] **Production SMTP** — week submit tested 2026-06-29; email sent to `johngoodspeed77@gmail.com` for e2e user week `2026-06-22`.
-- [ ] **Google OAuth** production redirect for public timesheet URL
-- [x] **RLS audit** — fixed in data-api: app-level `user_id` scoping (DB superuser bypassed RLS). Client also filters by `user_id`.
-- [ ] **Data API date-range filters** — client still loads all entries (now scoped to user)
+- [ ] **VM101 redeploy** — Option B `infra/.env` (`SDB_PROXY=0`, `SDB_PUBLIC_URL=https://supadupabase.whitelynx.co.nz`)
+- [ ] **VM106 migration** — `007_timesheet_public_origins.sql`
+- [ ] **Google OAuth** — redirect for `timesheet.whitelynx.co.nz`
+- [ ] **Data API date-range filters** — client still loads all entries (scoped to user)
 - [ ] Integration tests (RLS lock, submit flow, auto-fill)
 - [ ] Commit/push SupaDupaBase data-api scoping fix to GitHub
 - [ ] Tag release after public URL works
@@ -67,21 +69,18 @@ SupaDupaBase stack runs on the same VM (`192.168.1.19:80` via Caddy). Timesheet 
 | Overtime | >8h/day; Sat 1.5×, Sun 2×; OT premium stacks (×1.5 on top of day rate) |
 | Boss email | Per user in Settings |
 | Week submit | Sends email then **locks** week (unlock button available) |
-| Hosting | VM101 LAN now; `timesheet.whitelynx.co.nz` via Cloudflare Tunnel planned |
+| Hosting | VM101 PWA; backend VM106 (`supadupabase.whitelynx.co.nz`) |
 | UI stack | Vanilla HTML/CSS/JS — no React |
 | VM deploy | `DOCKER_BUILDKIT=0` required on VM101 |
 
-## Architecture
+## Architecture (Option B)
 
 ```
-Browser → Timesheet App (PWA :5180)
-            ├─ proxy /auth/*  → auth-service:3001
-            ├─ proxy /rest/*  → data-api:3002
-            └─ proxy /mail/*  → mail-service:3004
-         (Docker network: infra_sdb)
+Browser @ timesheet.whitelynx.co.nz (VM101 :5180)
+    → https://supadupabase.whitelynx.co.nz/auth|rest|mail (VM106)
 ```
 
-Local dev: browser talks directly to `:3001/:3002/:3004` via `config.js`.
+Local dev: Timesheet `:5180` → `localhost:3001/3002/3004` via `config.js`.
 
 ## Key files
 
@@ -91,9 +90,10 @@ Local dev: browser talks directly to `:3001/:3002/:3004` via `config.js`.
 | `hours.js` | Time math, `defaultShiftTimes`, `weekdayDatesInWeek` |
 | `reminders.js` | Push subscribe + local Sunday reminder fallback |
 | `sw.js` | Cache v10, network-first JS, push handlers |
-| `src/server.ts` | Static files + SupaDupaBase reverse proxy |
-| `infra/docker-compose.yml` | VM service; joins external `infra_sdb` network |
-| `infra/entrypoint.sh` | Generates `config.js` with VAPID + API URLs |
+| `lib/session.js` | Persistent auth (localStorage + refresh) |
+| `src/server.ts` | Static files; optional API proxy when `SDB_PROXY=1` |
+| `infra/docker-compose.yml` | VM101 — Timesheet only (no `infra_sdb`) |
+| `infra/entrypoint.sh` | Generates `config.js` with VM106 backend URL |
 
 ## Database (SupaDupaBase)
 
@@ -136,7 +136,8 @@ curl http://192.168.1.19:5180/
 - [README.md](./README.md)
 - [SAVEPOINT.md](./SAVEPOINT.md) *(still describes v0.1.0-local-mvp — update when tagging next release)*
 - [infra/DEPLOY_VM101.md](./infra/DEPLOY_VM101.md)
-- [SupaDupaBase AGENT_HANDOFF.md](../Cursor/supadupabase/AGENT_HANDOFF.md)
+- [SupaDupaBase docs/STACK.md](../../Cursor/supadupabase/docs/STACK.md)
+- [SupaDupaBase AGENT_HANDOFF.md](../../Cursor/supadupabase/AGENT_HANDOFF.md)
 
 ## Last updated
 

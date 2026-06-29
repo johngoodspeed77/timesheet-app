@@ -8,6 +8,9 @@ const rootDir = join(__dirname, '..');
 const sdkDir = process.env.SDK_DIR ?? join(rootDir, 'sdk');
 const port = Number(process.env.TIMESHEET_PORT ?? 5180);
 
+const proxyEnabled =
+  process.env.SDB_PROXY !== '0' && process.env.SDB_PROXY !== 'false';
+
 const authUpstream = (process.env.SDB_AUTH_UPSTREAM ?? 'http://127.0.0.1:3001').replace(/\/$/, '');
 const dataUpstream = (process.env.SDB_DATA_UPSTREAM ?? 'http://127.0.0.1:3002').replace(/\/$/, '');
 const mailUpstream = (process.env.SDB_MAIL_UPSTREAM ?? 'http://127.0.0.1:3004').replace(/\/$/, '');
@@ -33,6 +36,7 @@ const staticFiles: Record<string, string> = {
 };
 
 function proxyUpstream(pathname: string): string | null {
+  if (!proxyEnabled) return null;
   if (pathname.startsWith('/auth/')) return authUpstream;
   if (pathname.startsWith('/rest/')) return dataUpstream;
   if (pathname.startsWith('/mail/')) return mailUpstream;
@@ -92,6 +96,12 @@ async function resolveFile(pathname: string): Promise<{ filePath: string; conten
   if (pathname.startsWith('/sdk/')) {
     const sdkRel = pathname.slice(5);
     const filePath = join(sdkDir, sdkRel);
+    const ext = extname(filePath);
+    return { filePath, contentType: mime[ext] ?? 'text/javascript; charset=utf-8' };
+  }
+  if (pathname.startsWith('/lib/')) {
+    const libRel = pathname.slice(5);
+    const filePath = join(rootDir, 'lib', libRel);
     const ext = extname(filePath);
     return { filePath, contentType: mime[ext] ?? 'text/javascript; charset=utf-8' };
   }
