@@ -1,8 +1,18 @@
-const CACHE = 'timesheet-app-v11';
-const ASSETS = ['/', '/index.html', '/app.js', '/hours.js', '/reminders.js', '/styles.css', '/manifest.webmanifest'];
+const CACHE = 'timesheet-app-v12';
+const ASSETS = ['/', '/index.html', '/app.js', '/hours.js', '/reminders.js', '/styles.css?v=2', '/manifest.webmanifest'];
 
-/** HTML/JS: network first so auth fixes deploy without stale SW cache. */
-const NETWORK_FIRST = new Set(['/', '/index.html', '/app.js', '/hours.js', '/reminders.js', '/config.js', '/sw.js']);
+/** HTML/JS/CSS: network first so deploys are not masked by SW or CDN cache. */
+const NETWORK_FIRST = new Set([
+  '/',
+  '/index.html',
+  '/app.js',
+  '/hours.js',
+  '/reminders.js',
+  '/config.js',
+  '/sw.js',
+  '/styles.css',
+  '/manifest.webmanifest',
+]);
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)));
