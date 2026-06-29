@@ -1,4 +1,4 @@
-const CACHE = 'timesheet-app-v15';
+const CACHE = 'timesheet-app-v16';
 const ASSETS = ['/', '/index.html', '/app.js', '/hours.js', '/reminders.js', '/styles.css?v=4', '/manifest.webmanifest'];
 
 /** HTML/JS/CSS: network first so deploys are not masked by SW or CDN cache. */

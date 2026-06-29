@@ -80,28 +80,8 @@
 
         <section class="card">
           <h3>Daily entries</h3>
-          <p class="hint muted">Mon–Fri auto-fill a 40-hour week (8 h/day from your default start, incl. lunch). Edit and Save any day; add Sat/Sun manually.</p>
+          <p class="hint muted">Mon–Fri auto-fill a 40-hour week (8 h/day from your default start, incl. lunch). Adjust start/finish in each row and tap Save.</p>
           <div id="days-list" class="days-list"></div>
-        </section>
-
-        <section id="entry-form-section" class="card">
-          <h3 id="entry-form-title">Add / edit day</h3>
-          <form id="entry-form">
-            <input type="hidden" id="entry-id" />
-            <label>Date <input id="entry-date" type="text" inputmode="numeric" placeholder="DD/MM/YYYY" autocomplete="off" required /></label>
-            <div class="row">
-              <label>Start <input id="entry-start" type="time" step="900" required /></label>
-              <label>Finish <input id="entry-end" type="time" step="900" required /></label>
-            </div>
-            <p class="hint muted">30 min lunch deducted automatically. Adjust start or finish if your day was different.</p>
-            <label>Notes <input id="entry-notes" type="text" placeholder="Optional" /></label>
-            <div class="row actions">
-              <button type="submit">Save day</button>
-              <button type="button" id="delete-entry" class="ghost">Delete</button>
-              <button type="button" id="clear-form" class="ghost">Clear</button>
-            </div>
-          </form>
-          <div id="entry-error" class="error" hidden></div>
         </section>
 
         <section class="card app-footer-actions">

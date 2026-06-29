@@ -17,14 +17,12 @@ import {
   defaultFinishTime,
   defaultShiftTimes,
   DEFAULT_START_TIME,
-  formatDateNz,
   formatDateRangeNz,
   formatHours,
   formatWeekday,
   LUNCH_HOURS,
   normalizeDate,
   normalizeTime,
-  parseDateNz,
   parseTimeToHours,
   snapTimeToQuarterHour,
   STANDARD_WEEK_HOURS,
@@ -56,7 +54,6 @@ const state = {
   submissions: [],
   settings: null,
   locked: false,
-  finishManuallyEdited: false,
 };
 
 const els = {
@@ -78,14 +75,6 @@ const els = {
   totalOt: document.getElementById('total-ot'),
   totalPaid: document.getElementById('total-paid'),
   weekHoursHint: document.getElementById('week-hours-hint'),
-  entryForm: document.getElementById('entry-form'),
-  entryFormSection: document.getElementById('entry-form-section'),
-  entryId: document.getElementById('entry-id'),
-  entryDate: document.getElementById('entry-date'),
-  entryStart: document.getElementById('entry-start'),
-  entryEnd: document.getElementById('entry-end'),
-  entryNotes: document.getElementById('entry-notes'),
-  entryError: document.getElementById('entry-error'),
   submitWeek: document.getElementById('submit-week'),
   submitError: document.getElementById('submit-error'),
   submitSuccess: document.getElementById('submit-success'),
@@ -183,6 +172,93 @@ async function refreshWeekView() {
   updateWeekUI();
 }
 
+function defaultTimesForDate(workDate) {
+  const entry = state.entries.find((e) => normalizeDate(e.work_date) === workDate);
+  if (entry) {
+    return {
+      start: normalizeTime(entry.start_time),
+      end: normalizeTime(entry.end_time),
+    };
+  }
+  return defaultShiftTimes(state.settings);
+}
+
+function statsHtml(workDate, start, end) {
+  if (!start || !end) {
+    return '<span class="muted">Enter start and finish times</span>';
+  }
+  const day = calcDay(workDate, start, end);
+  const gross = parseTimeToHours(end) - parseTimeToHours(start);
+  const otPart =
+    day.dailyOt > 0 ? `<span class="muted">· OT ${formatHours(day.dailyOt)}</span>` : '';
+  const lunchHint =
+    gross > day.worked
+      ? `<span class="muted day-lunch-hint">${formatHours(gross)}h − ${formatHours(LUNCH_HOURS)} lunch</span>`
+      : '';
+  return `
+    <span>${formatHours(day.worked)}h</span>
+    ${otPart}
+    <span class="paid">· ${formatHours(day.totalPaid)} paid</span>
+    ${lunchHint}
+  `;
+}
+
+function showRowError(row, msg) {
+  const el = row.querySelector('.day-row-error');
+  if (!el) return;
+  showMsg(el, msg);
+}
+
+function updateRowStats(row) {
+  const workDate = row.dataset.date;
+  const start = row.querySelector('.day-start')?.value ?? '';
+  const end = row.querySelector('.day-end')?.value ?? '';
+  const stats = row.querySelector('.day-line-stats');
+  if (stats) stats.innerHTML = statsHtml(workDate, start, end);
+  const emptyHint = row.querySelector('.day-empty-hint');
+  if (emptyHint) emptyHint.hidden = Boolean(start && end);
+}
+
+async function saveDayEntry(row) {
+  if (state.locked) return;
+  showRowError(row, '');
+
+  const workDate = row.dataset.date;
+  const startTime = toApiTime(snapTimeToQuarterHour(row.querySelector('.day-start').value));
+  const endTime = toApiTime(snapTimeToQuarterHour(row.querySelector('.day-end').value));
+  if (!startTime || !endTime) {
+    return showRowError(row, 'Enter valid start and finish times');
+  }
+
+  const payload = {
+    work_date: workDate,
+    start_time: startTime,
+    end_time: endTime,
+    user_id: state.user.id,
+  };
+
+  const id = row.dataset.entryId;
+  let result;
+  if (id) {
+    result = await client.from('time_entries').eq('id', id).update(payload);
+  } else {
+    result = await client.from('time_entries').insert({ ...payload, notes: null });
+  }
+
+  if (result.error) return showRowError(row, result.error.message);
+  await loadData();
+}
+
+async function deleteDayEntry(row) {
+  const id = row.dataset.entryId;
+  if (!id || state.locked) return;
+  if (!confirm('Delete this day entry?')) return;
+  showRowError(row, '');
+  const { error } = await client.from('time_entries').eq('id', id).delete();
+  if (error) return showRowError(row, error.message);
+  await loadData();
+}
+
 function updateWeekUI() {
   const weekEnd = addDays(state.weekStart, 6);
   els.weekLabel.textContent = formatDateRangeNz(state.weekStart, weekEnd);
@@ -191,10 +267,6 @@ function updateWeekUI() {
   );
   els.lockedBanner.hidden = !state.locked;
   els.unlockWeek.hidden = !state.locked;
-  els.entryFormSection.style.opacity = state.locked ? '0.5' : '1';
-  els.entryForm.querySelectorAll('input, button').forEach((n) => {
-    if (n.id !== 'clear-form') n.disabled = state.locked;
-  });
   els.submitWeek.disabled = state.locked;
 
   const week = calcWeek(weekEntries(), state.weekStart);
@@ -214,50 +286,37 @@ function updateWeekUI() {
   for (let i = 0; i < 7; i += 1) {
     const date = addDays(state.weekStart, i);
     const entry = state.entries.find((e) => normalizeDate(e.work_date) === date);
+    const { start, end } = defaultTimesForDate(date);
     const row = document.createElement('div');
-    row.className = 'day-row';
+    row.className = `day-row${state.locked ? ' is-locked' : ''}`;
+    row.dataset.date = date;
+    row.dataset.entryId = entry?.id ?? '';
+    row.dataset.hasEntry = entry ? '1' : '0';
 
-    if (entry) {
-      const day = calcDay(date, entry.start_time, entry.end_time);
-      const start = normalizeTime(entry.start_time);
-      const end = normalizeTime(entry.end_time);
-      const gross = parseTimeToHours(end) - parseTimeToHours(start);
-      const otPart =
-        day.dailyOt > 0 ? `<span class="muted">· OT ${formatHours(day.dailyOt)}</span>` : '';
-      const lunchHint =
-        gross > day.worked
-          ? `<span class="muted day-lunch-hint">${formatHours(gross)}h − ${formatHours(LUNCH_HOURS)} lunch</span>`
-          : '';
-      row.innerHTML = `
-        <div class="day-line-primary">${formatWeekday(date)} ${start}–${end}</div>
-        <div class="day-line-secondary">
-          <div class="day-line-stats">
-            <span>${formatHours(day.worked)}h</span>
-            ${otPart}
-            <span class="paid">· ${formatHours(day.totalPaid)} paid</span>
-            ${lunchHint}
-          </div>
-          <button type="button" class="ghost sm edit-day" data-date="${date}" ${state.locked ? 'disabled' : ''}>Edit</button>
+    const disabled = state.locked ? 'disabled' : '';
+    const deleteBtn = entry
+      ? `<button type="button" class="ghost sm delete-day" ${disabled}>Delete</button>`
+      : '';
+
+    row.innerHTML = `
+      <div class="day-line-primary">
+        <span class="day-weekday">${formatWeekday(date)}</span>
+        <input type="time" class="day-start" step="900" value="${start}" ${disabled} required />
+        <span class="day-time-sep" aria-hidden="true">–</span>
+        <input type="time" class="day-end" step="900" value="${end}" ${disabled} required />
+      </div>
+      <div class="day-line-secondary">
+        <div class="day-line-stats">${statsHtml(date, start, end)}</div>
+        <div class="day-row-actions">
+          <button type="button" class="sm save-day" ${disabled}>Save</button>
+          ${deleteBtn}
         </div>
-      `;
-    } else {
-      row.innerHTML = `
-        <div class="day-line-primary">${formatWeekday(date)}</div>
-        <div class="day-line-secondary">
-          <span class="muted">No entry</span>
-          <button type="button" class="ghost sm edit-day" data-date="${date}" ${state.locked ? 'disabled' : ''}>Add</button>
-        </div>
-      `;
-    }
+      </div>
+      <span class="muted day-empty-hint"${entry ? ' hidden' : ''}>No entry yet</span>
+      <div class="day-row-error error" hidden></div>
+    `;
     els.daysList.appendChild(row);
   }
-
-  els.daysList.querySelectorAll('.edit-day').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      if (state.locked || btn.disabled) return;
-      loadEntryForm(btn.dataset.date);
-    });
-  });
 }
 
 async function loadData() {
@@ -301,7 +360,6 @@ function applySettingsToState(row) {
 
 async function enterApp() {
   showMsg(els.authError, '');
-  showMsg(els.entryError, '');
 
   const restored = await restoreAuthSession(AUTH_URL);
   if (!restored) {
@@ -330,36 +388,64 @@ async function enterApp() {
   );
 }
 
-function applyDefaultShiftToForm() {
-  const { start, end } = defaultShiftTimes(state.settings, els.defaultStart.value);
-  els.entryStart.value = start;
-  els.entryEnd.value = end;
-  state.finishManuallyEdited = false;
-}
-
-function loadEntryForm(date) {
-  showMsg(els.entryError, '');
-  const entry = state.entries.find((e) => normalizeDate(e.work_date) === date);
-  els.entryId.value = entry?.id ?? '';
-  els.entryDate.value = formatDateNz(date);
-  if (entry) {
-    els.entryStart.value = normalizeTime(entry.start_time);
-    els.entryEnd.value = normalizeTime(entry.end_time);
-    state.finishManuallyEdited = true;
-  } else {
-    applyDefaultShiftToForm();
+document.getElementById('prev-week').addEventListener('click', async () => {
+  state.weekStart = addDays(state.weekStart, -7);
+  try {
+    await refreshWeekView();
+  } catch (err) {
+    showMsg(els.submitError, err.message ?? 'Failed to load week');
   }
-  els.entryNotes.value = entry?.notes ?? '';
-  els.entryFormSection.scrollIntoView({ behavior: 'smooth' });
-}
+});
 
-function clearEntryForm() {
-  els.entryId.value = '';
-  els.entryDate.value = formatDateNz(addDays(state.weekStart, 0));
-  applyDefaultShiftToForm();
-  els.entryNotes.value = '';
-  showMsg(els.entryError, '');
-}
+document.getElementById('next-week').addEventListener('click', async () => {
+  state.weekStart = addDays(state.weekStart, 7);
+  try {
+    await refreshWeekView();
+  } catch (err) {
+    showMsg(els.submitError, err.message ?? 'Failed to load week');
+  }
+});
+
+els.daysList.addEventListener('click', async (e) => {
+  if (state.locked) return;
+  const row = e.target.closest('.day-row');
+  if (!row) return;
+
+  if (e.target.closest('.save-day')) {
+    const btn = e.target.closest('.save-day');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    try {
+      await saveDayEntry(row);
+    } finally {
+      btn.disabled = state.locked;
+    }
+    return;
+  }
+
+  if (e.target.closest('.delete-day')) {
+    const btn = e.target.closest('.delete-day');
+    if (btn.disabled) return;
+    await deleteDayEntry(row);
+  }
+});
+
+els.daysList.addEventListener('input', (e) => {
+  if (state.locked) return;
+  const row = e.target.closest('.day-row');
+  if (!row) return;
+
+  if (e.target.classList.contains('day-start')) {
+    if (row.dataset.hasEntry !== '1' && row.dataset.finishEdited !== '1') {
+      const endInput = row.querySelector('.day-end');
+      if (endInput) endInput.value = defaultFinishTime(e.target.value);
+    }
+    updateRowStats(row);
+  } else if (e.target.classList.contains('day-end')) {
+    row.dataset.finishEdited = '1';
+    updateRowStats(row);
+  }
+});
 
 document.getElementById('signup-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -440,85 +526,6 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
   els.appPanel.hidden = true;
   els.settingsPanel.hidden = true;
   els.status.textContent = 'Signed out';
-});
-
-document.getElementById('prev-week').addEventListener('click', async () => {
-  state.weekStart = addDays(state.weekStart, -7);
-  try {
-    await refreshWeekView();
-  } catch (err) {
-    showMsg(els.entryError, err.message ?? 'Failed to load week');
-  }
-});
-
-document.getElementById('next-week').addEventListener('click', async () => {
-  state.weekStart = addDays(state.weekStart, 7);
-  try {
-    await refreshWeekView();
-  } catch (err) {
-    showMsg(els.entryError, err.message ?? 'Failed to load week');
-  }
-});
-
-els.entryForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  if (state.locked) return;
-  showMsg(els.entryError, '');
-
-  const workDate = parseDateNz(els.entryDate.value);
-  if (!workDate) {
-    return showMsg(els.entryError, 'Enter date as DD/MM/YYYY');
-  }
-
-  const startTime = toApiTime(snapTimeToQuarterHour(els.entryStart.value));
-  const endTime = toApiTime(snapTimeToQuarterHour(els.entryEnd.value));
-  if (!startTime || !endTime) {
-    return showMsg(els.entryError, 'Enter valid start and finish times');
-  }
-
-  const payload = {
-    work_date: workDate,
-    start_time: startTime,
-    end_time: endTime,
-    notes: els.entryNotes.value || null,
-    user_id: state.user.id,
-  };
-
-  const existing = state.entries.find(
-    (e) => normalizeDate(e.work_date) === workDate,
-  );
-  const id = els.entryId.value || existing?.id;
-  let result;
-  if (id) {
-    result = await client.from('time_entries').eq('id', id).update(payload);
-  } else {
-    result = await client.from('time_entries').insert(payload);
-  }
-
-  if (result.error) return showMsg(els.entryError, result.error.message);
-  await loadData();
-  loadEntryForm(workDate);
-});
-
-document.getElementById('delete-entry').addEventListener('click', async () => {
-  const id = els.entryId.value;
-  if (!id || state.locked) return;
-  if (!confirm('Delete this day entry?')) return;
-  const { error } = await client.from('time_entries').eq('id', id).delete();
-  if (error) return showMsg(els.entryError, error.message);
-  clearEntryForm();
-  await loadData();
-});
-
-document.getElementById('clear-form').addEventListener('click', clearEntryForm);
-
-els.entryEnd.addEventListener('input', () => {
-  state.finishManuallyEdited = true;
-});
-
-els.entryStart.addEventListener('input', () => {
-  if (state.finishManuallyEdited || els.entryId.value) return;
-  els.entryEnd.value = defaultFinishTime(els.entryStart.value);
 });
 
 document.getElementById('settings-btn').addEventListener('click', async () => {
@@ -716,5 +723,5 @@ document.addEventListener('visibilitychange', () => {
 });
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js?v=15').catch(() => {});
+  navigator.serviceWorker.register('/sw.js?v=16').catch(() => {});
 }

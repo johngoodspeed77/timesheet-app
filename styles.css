@@ -132,7 +132,19 @@ button.sm { width: auto; min-height: 40px; padding: 0.4rem 0.75rem; font-size: 0
   border-radius: 6px;
   border: 1px solid #1e293b;
 }
-.day-line-primary { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.day-line-primary { font-weight: 600; min-width: 0; overflow-wrap: anywhere; display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.5rem; }
+.day-weekday { flex-shrink: 0; }
+.day-line-primary input[type="time"] {
+  width: auto;
+  min-width: 5.5rem;
+  max-width: 7rem;
+  display: inline-block;
+  margin: 0;
+  padding: 0.35rem 0.5rem;
+  min-height: 40px;
+  font-size: 0.875rem;
+}
+.day-time-sep { color: var(--muted); font-weight: 400; flex-shrink: 0; }
 .day-line-primary .muted { font-weight: 400; }
 .day-line-secondary {
   display: flex;
@@ -151,7 +163,11 @@ button.sm { width: auto; min-height: 40px; padding: 0.4rem 0.75rem; font-size: 0
 }
 .day-line-stats .paid { color: var(--cyan); }
 .day-line-stats .day-lunch-hint { flex: 1 1 100%; font-size: 0.75rem; }
-.day-line-secondary > .ghost.sm { width: auto; flex-shrink: 0; }
+.day-row-actions { display: flex; flex-shrink: 0; gap: 0.35rem; align-items: center; }
+.day-row-actions button { width: auto; margin: 0; }
+.day-empty-hint { font-size: 0.8125rem; }
+.day-row.is-locked { opacity: 0.55; }
+.day-row-error { margin-top: 0.25rem; }
 
 .submit-section button { margin-top: 0.5rem; }
 
