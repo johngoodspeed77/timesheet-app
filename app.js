@@ -87,6 +87,7 @@ const els = {
 };
 
 function showMsg(el, msg) {
+  if (!el) return;
   el.textContent = msg;
   el.hidden = !msg;
 }
@@ -447,38 +448,6 @@ els.daysList.addEventListener('input', (e) => {
   }
 });
 
-document.getElementById('signup-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  showMsg(els.authError, '');
-  try {
-    const res = await fetch(`${AUTH_URL}/auth/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: document.getElementById('su-email').value,
-        password: document.getElementById('su-password').value,
-      }),
-    });
-    let body = {};
-    try {
-      body = await res.json();
-    } catch {
-      body = {};
-    }
-    if (!res.ok) {
-      const msg =
-        body.error === 'email_exists'
-          ? 'An account with this email already exists — use Sign in below.'
-          : body.message ?? 'Sign up failed';
-      return showMsg(els.authError, msg);
-    }
-    persistSession(body);
-    await enterApp();
-  } catch (err) {
-    showMsg(els.authError, err.message ?? 'Sign up failed — check your connection');
-  }
-});
-
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   showMsg(els.authError, '');
@@ -500,7 +469,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     if (!res.ok) {
       const msg =
         body.error === 'invalid_credentials'
-          ? 'Invalid email or password. If you have not created an account on this server yet, use Create account above.'
+          ? 'Invalid email or password.'
           : body.message ?? 'Invalid email or password';
       return showMsg(els.authError, msg);
     }
@@ -512,10 +481,6 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   } catch (err) {
     showMsg(els.authError, err.message ?? 'Sign in failed — check your connection');
   }
-});
-
-document.getElementById('google-btn').addEventListener('click', () => {
-  window.location.href = `${AUTH_URL}/auth/signin/google?redirect_to=${encodeURIComponent(window.location.origin)}`;
 });
 
 document.getElementById('logout-btn').addEventListener('click', async () => {
@@ -723,5 +688,5 @@ document.addEventListener('visibilitychange', () => {
 });
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js?v=17').catch(() => {});
+  navigator.serviceWorker.register('/sw.js?v=18').catch(() => {});
 }

@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#06080c" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>Timesheet App</title>
-    <link rel="stylesheet" href="/styles.css?v=5" />
+    <link rel="stylesheet" href="/styles.css?v=6" />
     <script src="/config.js"></script>
   </head>
   <body class="shell">
@@ -28,21 +28,12 @@
 
       <section id="auth-panel" class="card">
         <h1>Timesheet App</h1>
-        <p class="muted">Log your hours Mon–Sun and email your boss at week end.</p>
-
-        <form id="signup-form">
-          <h2>Sign up</h2>
-          <input id="su-email" type="email" placeholder="Email" required autocomplete="username" />
-          <input id="su-password" type="password" placeholder="Password (8+)" minlength="8" required autocomplete="new-password" />
-          <button type="submit">Create account</button>
-        </form>
+        <p class="muted">Log your hours Mon–Sun and email your boss at week end. Sign in with the account your admin invited you to.</p>
 
         <form id="login-form">
-          <h2>Sign in</h2>
           <input id="li-email" type="email" placeholder="Email" required autocomplete="username" />
           <input id="li-password" type="password" placeholder="Password" required autocomplete="current-password" />
           <button type="submit">Sign in</button>
-          <button type="button" id="google-btn" class="ghost">Google</button>
         </form>
 
         <div id="auth-error" class="error" hidden></div>
@@ -121,6 +112,6 @@
       </section>
     </main>
 
-    <script type="module" src="/app.js"></script>
+    <script type="module" src="/app.js?v=18"></script>
   </body>
 </html>

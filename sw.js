@@ -1,5 +1,5 @@
-const CACHE = 'timesheet-app-v17';
-const ASSETS = ['/', '/index.html', '/app.js', '/hours.js', '/reminders.js', '/styles.css?v=5', '/manifest.webmanifest'];
+const CACHE = 'timesheet-app-v18';
+const ASSETS = ['/', '/index.html', '/app.js?v=18', '/hours.js', '/reminders.js', '/styles.css?v=6', '/manifest.webmanifest'];
 
 /** HTML/JS/CSS: network first so deploys are not masked by SW or CDN cache. */
 const NETWORK_FIRST = new Set([
@@ -36,7 +36,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (NETWORK_FIRST.has(url.pathname)) {
+  const pathKey = url.pathname;
+  if (NETWORK_FIRST.has(pathKey)) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
