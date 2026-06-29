@@ -124,27 +124,34 @@ button.sm { width: auto; min-height: 40px; padding: 0.4rem 0.75rem; font-size: 0
 
 .days-list { display: grid; gap: 0.5rem; }
 .day-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 0.75rem;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
   padding: 0.75rem;
   background: #0b1018;
   border-radius: 6px;
   border: 1px solid #1e293b;
 }
-.day-row > div:empty { display: none; }
-.day-info { min-width: 0; overflow-wrap: anywhere; }
-.day-info strong { display: block; }
-.day-stats {
+.day-line-primary { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.day-line-primary .muted { font-weight: 400; }
+.day-line-secondary {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   font-size: 0.875rem;
   min-width: 0;
 }
-.day-stats .paid { color: var(--cyan); }
-.day-stats .day-lunch-hint { flex: 1 1 100%; font-size: 0.75rem; }
+.day-line-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  min-width: 0;
+}
+.day-line-stats .paid { color: var(--cyan); }
+.day-line-stats .day-lunch-hint { flex: 1 1 100%; font-size: 0.75rem; }
+.day-line-secondary > .ghost.sm { width: auto; flex-shrink: 0; }
 
 .submit-section button { margin-top: 0.5rem; }
 
@@ -212,17 +219,6 @@ h1, h2, h3 { margin-top: 0; }
 
   .toolbar-actions button { width: 100%; }
 
-  .day-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "info btn"
-      "stats stats";
-  }
-
-  .day-row > .day-info { grid-area: info; }
-  .day-row > .day-stats { grid-area: stats; }
-  .day-row > button { grid-area: btn; justify-self: end; align-self: start; }
-
   .row { grid-template-columns: 1fr; }
 
   .actions button {
@@ -234,6 +230,6 @@ h1, h2, h3 { margin-top: 0; }
 }
 
 @media (max-width: 380px) {
-  .day-stats { font-size: 0.8125rem; }
+  .day-line-stats { font-size: 0.8125rem; }
   button.sm { padding: 0.35rem 0.5rem; font-size: 0.8125rem; }
 }

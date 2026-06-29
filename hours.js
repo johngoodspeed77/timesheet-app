@@ -169,3 +169,8 @@ export function formatDisplayDate(dateStr) {
   const d = new Date(`${normalizeDate(dateStr)}T12:00:00`);
   return `${DAY_NAMES[d.getDay()]} ${formatDateNz(dateStr)}`;
 }
+
+export function formatWeekday(dateStr) {
+  const d = new Date(`${normalizeDate(dateStr)}T12:00:00`);
+  return DAY_NAMES[d.getDay()];
+}

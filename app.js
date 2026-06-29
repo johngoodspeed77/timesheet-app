@@ -17,10 +17,10 @@ import {
   defaultFinishTime,
   defaultShiftTimes,
   DEFAULT_START_TIME,
-  formatDisplayDate,
   formatDateNz,
   formatDateRangeNz,
   formatHours,
+  formatWeekday,
   LUNCH_HOURS,
   normalizeDate,
   normalizeTime,
@@ -221,28 +221,31 @@ function updateWeekUI() {
       const start = normalizeTime(entry.start_time);
       const end = normalizeTime(entry.end_time);
       const gross = parseTimeToHours(end) - parseTimeToHours(start);
+      const otPart =
+        day.dailyOt > 0 ? `<span class="muted">· OT ${formatHours(day.dailyOt)}</span>` : '';
       const lunchHint =
         gross > day.worked
           ? `<span class="muted day-lunch-hint">${formatHours(gross)}h − ${formatHours(LUNCH_HOURS)} lunch</span>`
           : '';
       row.innerHTML = `
-        <div class="day-info">
-          <strong>${formatDisplayDate(date)}</strong>
-          <span class="muted">${start} – ${end}</span>
+        <div class="day-line-primary">${formatWeekday(date)} ${start}–${end}</div>
+        <div class="day-line-secondary">
+          <div class="day-line-stats">
+            <span>${formatHours(day.worked)}h</span>
+            ${otPart}
+            <span class="paid">· ${formatHours(day.totalPaid)} paid</span>
+            ${lunchHint}
+          </div>
+          <button type="button" class="ghost sm edit-day" data-date="${date}" ${state.locked ? 'disabled' : ''}>Edit</button>
         </div>
-        <div class="day-stats">
-          <span>${formatHours(day.worked)}h</span>
-          ${lunchHint}
-          <span class="muted">OT ${formatHours(day.dailyOt)}</span>
-          <span class="paid">${formatHours(day.totalPaid)} paid</span>
-        </div>
-        <button type="button" class="ghost sm edit-day" data-date="${date}" ${state.locked ? 'disabled' : ''}>Edit</button>
       `;
     } else {
       row.innerHTML = `
-        <div class="day-info"><strong>${formatDisplayDate(date)}</strong><span class="muted">No entry</span></div>
-        <div></div>
-        <button type="button" class="ghost sm edit-day" data-date="${date}" ${state.locked ? 'disabled' : ''}>Add</button>
+        <div class="day-line-primary">${formatWeekday(date)}</div>
+        <div class="day-line-secondary">
+          <span class="muted">No entry</span>
+          <button type="button" class="ghost sm edit-day" data-date="${date}" ${state.locked ? 'disabled' : ''}>Add</button>
+        </div>
       `;
     }
     els.daysList.appendChild(row);
@@ -712,5 +715,5 @@ document.addEventListener('visibilitychange', () => {
 });
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js?v=13').catch(() => {});
+  navigator.serviceWorker.register('/sw.js?v=14').catch(() => {});
 }
