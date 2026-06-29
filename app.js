@@ -26,6 +26,7 @@ import {
   normalizeTime,
   parseDateNz,
   parseTimeToHours,
+  snapTimeToQuarterHour,
   STANDARD_WEEK_HOURS,
   toApiTime,
   weekdayDatesInWeek,
@@ -469,8 +470,8 @@ els.entryForm.addEventListener('submit', async (e) => {
     return showMsg(els.entryError, 'Enter date as DD/MM/YYYY');
   }
 
-  const startTime = toApiTime(els.entryStart.value);
-  const endTime = toApiTime(els.entryEnd.value);
+  const startTime = toApiTime(snapTimeToQuarterHour(els.entryStart.value));
+  const endTime = toApiTime(snapTimeToQuarterHour(els.entryEnd.value));
   if (!startTime || !endTime) {
     return showMsg(els.entryError, 'Enter valid start and finish times');
   }
@@ -547,7 +548,7 @@ document.getElementById('settings-form').addEventListener('submit', async (e) =>
   showMsg(els.settingsError, '');
   showMsg(els.settingsSuccess, '');
 
-  const defaultStartTime = toApiTime(els.defaultStart.value);
+  const defaultStartTime = toApiTime(snapTimeToQuarterHour(els.defaultStart.value));
   if (!defaultStartTime) {
     return showMsg(els.settingsError, 'Choose a default start time');
   }
@@ -715,5 +716,5 @@ document.addEventListener('visibilitychange', () => {
 });
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js?v=14').catch(() => {});
+  navigator.serviceWorker.register('/sw.js?v=15').catch(() => {});
 }

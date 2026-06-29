@@ -90,8 +90,8 @@
             <input type="hidden" id="entry-id" />
             <label>Date <input id="entry-date" type="text" inputmode="numeric" placeholder="DD/MM/YYYY" autocomplete="off" required /></label>
             <div class="row">
-              <label>Start <input id="entry-start" type="time" step="60" required /></label>
-              <label>Finish <input id="entry-end" type="time" step="60" required /></label>
+              <label>Start <input id="entry-start" type="time" step="900" required /></label>
+              <label>Finish <input id="entry-end" type="time" step="900" required /></label>
             </div>
             <p class="hint muted">30 min lunch deducted automatically. Adjust start or finish if your day was different.</p>
             <label>Notes <input id="entry-notes" type="text" placeholder="Optional" /></label>
@@ -123,7 +123,7 @@
             <input id="boss-email" type="email" placeholder="boss@company.com" required />
           </label>
           <label>Default start time
-            <input id="default-start" type="time" step="60" required />
+            <input id="default-start" type="time" step="900" required />
           </label>
           <p class="hint muted">Default 8:00 AM start — Mon–Fri auto-fill a 40 h/week (finish includes 30 min lunch). Change this to adjust future auto-filled weeks.</p>
           <label class="checkbox-row">

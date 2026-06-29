@@ -57,6 +57,19 @@ export function toApiTime(value) {
   return `${t}:00`;
 }
 
+/** Snap clock time to nearest 15 minutes (quarter-hour picker). */
+export function snapTimeToQuarterHour(value) {
+  const t = normalizeTime(value);
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const totalMins = h * 60 + (m || 0);
+  const snapped = Math.round(totalMins / 15) * 15;
+  const wrapped = ((snapped % (24 * 60)) + 24 * 60) % (24 * 60);
+  const nh = Math.floor(wrapped / 60);
+  const nm = wrapped % 60;
+  return `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`;
+}
+
 /** Paid/worked hours for a default shift. */
 export const SHIFT_HOURS = 8;
 
