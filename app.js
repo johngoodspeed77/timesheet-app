@@ -86,6 +86,8 @@ const els = {
   settingsSuccess: document.getElementById('settings-success'),
 };
 
+let enterAppGeneration = 0;
+
 function showMsg(el, msg) {
   if (!el) return;
   el.textContent = msg;
@@ -359,28 +361,62 @@ function applySettingsToState(row) {
   els.weeklyReminder.checked = Boolean(row.weekly_reminder_enabled);
 }
 
-async function enterApp() {
+async function enterApp(freshSession = null) {
+  const gen = ++enterAppGeneration;
   showMsg(els.authError, '');
 
-  const restored = await restoreAuthSession(AUTH_URL);
-  if (!restored) {
-    clearSession();
-    showAuthPanel();
-    return;
+  let accessToken;
+  let user;
+
+  if (freshSession?.access_token) {
+    persistSession(freshSession);
+    accessToken = freshSession.access_token;
+    user = freshSession.user ?? null;
+  } else {
+    const restored = await restoreAuthSession(AUTH_URL);
+    if (gen !== enterAppGeneration) return;
+    if (!restored) {
+      clearSession();
+      showAuthPanel();
+      showMsg(els.authError, 'Session expired. Sign in again.');
+      return;
+    }
+    accessToken = restored.accessToken;
+    user = restored.user;
   }
 
-  client.setAccessToken(restored.accessToken);
-  state.user = restored.user;
-  els.status.textContent = restored.user.email;
+  if (!user) {
+    const meRes = await fetch(`${AUTH_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
+    });
+    if (gen !== enterAppGeneration) return;
+    if (!meRes.ok) {
+      clearSession();
+      showAuthPanel();
+      showMsg(els.authError, 'Signed in but could not verify your account. Try again.');
+      return;
+    }
+    const meBody = await meRes.json();
+    user = meBody.user;
+  }
+
+  if (gen !== enterAppGeneration) return;
+
+  client.setAccessToken(accessToken);
+  state.user = user;
+  els.status.textContent = user.email;
 
   try {
     await loadData();
   } catch (err) {
+    if (gen !== enterAppGeneration) return;
     clearSession();
     showAuthPanel();
     showMsg(els.authError, err.message ?? 'Signed in but could not load your timesheet.');
     return;
   }
+
+  if (gen !== enterAppGeneration) return;
 
   showAppPanel();
   maybeShowLocalWeeklyReminder(
@@ -453,6 +489,13 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   showMsg(els.authError, '');
   const email = document.getElementById('li-email').value.trim();
   const password = document.getElementById('li-password').value;
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const btnLabel = submitBtn?.textContent ?? 'Sign in';
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Signing in…';
+  }
 
   try {
     const res = await fetch(`${AUTH_URL}/auth/login`, {
@@ -476,10 +519,14 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     if (!body.access_token) {
       return showMsg(els.authError, 'Sign in failed — no session received from server');
     }
-    persistSession(body);
-    await enterApp();
+    await enterApp(body);
   } catch (err) {
     showMsg(els.authError, err.message ?? 'Sign in failed — check your connection');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = btnLabel;
+    }
   }
 });
 
@@ -653,9 +700,8 @@ if (els.inviteForm) {
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.message ?? 'Could not accept invite');
-      persistSession(body);
       window.history.replaceState({}, '', window.location.pathname);
-      await enterApp();
+      await enterApp(body);
     } catch (err) {
       showMsg(els.inviteError, err.message ?? 'Could not accept invite');
     }
@@ -665,12 +711,12 @@ if (els.inviteForm) {
 if (inviteToken) {
   loadInvitePanel(inviteToken);
 } else if (params.get('access_token')) {
-  persistSession({
+  const oauthSession = {
     access_token: params.get('access_token'),
     refresh_token: params.get('refresh_token'),
-  });
+  };
   window.history.replaceState({}, '', window.location.pathname);
-  enterApp();
+  enterApp(oauthSession);
 } else if (initialTokens.accessToken || initialTokens.refreshToken) {
   enterApp().catch((err) => {
     clearSession();
@@ -688,5 +734,5 @@ document.addEventListener('visibilitychange', () => {
 });
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js?v=18').catch(() => {});
+  navigator.serviceWorker.register('/sw.js?v=19').catch(() => {});
 }
