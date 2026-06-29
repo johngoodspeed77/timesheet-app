@@ -58,6 +58,10 @@ const state = {
 
 const els = {
   status: document.getElementById('status'),
+  invitePanel: document.getElementById('invite-panel'),
+  inviteEmailLabel: document.getElementById('invite-email-label'),
+  inviteForm: document.getElementById('invite-form'),
+  inviteError: document.getElementById('invite-error'),
   authPanel: document.getElementById('auth-panel'),
   appPanel: document.getElementById('app-panel'),
   settingsPanel: document.getElementById('settings-panel'),
@@ -107,12 +111,21 @@ function clearSession() {
 }
 
 function showAuthPanel() {
+  if (els.invitePanel) els.invitePanel.hidden = true;
   els.authPanel.hidden = false;
   els.appPanel.hidden = true;
   els.settingsPanel.hidden = true;
 }
 
+function showInvitePanel() {
+  if (els.invitePanel) els.invitePanel.hidden = false;
+  els.authPanel.hidden = true;
+  els.appPanel.hidden = true;
+  els.settingsPanel.hidden = true;
+}
+
 function showAppPanel() {
+  if (els.invitePanel) els.invitePanel.hidden = true;
   els.authPanel.hidden = true;
   els.settingsPanel.hidden = true;
   els.appPanel.hidden = false;
@@ -385,7 +398,11 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
       body = {};
     }
     if (!res.ok) {
-      return showMsg(els.authError, body.message ?? 'Invalid email or password');
+      const msg =
+        body.error === 'invalid_credentials'
+          ? 'Invalid email or password. If you have not created an account on this server yet, use Create account above.'
+          : body.message ?? 'Invalid email or password';
+      return showMsg(els.authError, msg);
     }
     if (!body.access_token) {
       return showMsg(els.authError, 'Sign in failed — no session received from server');
@@ -618,7 +635,50 @@ els.submitWeek.addEventListener('click', async () => {
 });
 
 const params = new URLSearchParams(window.location.search);
-if (params.get('access_token')) {
+const inviteToken = params.get('invite_token');
+
+async function loadInvitePanel(token) {
+  showInvitePanel();
+  showMsg(els.inviteError, '');
+  try {
+    const res = await fetch(`${AUTH_URL}/auth/invite/${encodeURIComponent(token)}`);
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.message ?? 'Invalid invite');
+    const project = body.project_name ? ` for ${body.project_name}` : '';
+    els.inviteEmailLabel.textContent = `Create your account (${body.email})${project}.`;
+    els.inviteForm.dataset.token = token;
+  } catch (err) {
+    els.inviteEmailLabel.textContent = err.message ?? 'Invite not found';
+    els.inviteForm.querySelector('button').disabled = true;
+  }
+}
+
+if (els.inviteForm) {
+  els.inviteForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    showMsg(els.inviteError, '');
+    const token = els.inviteForm.dataset.token;
+    const password = document.getElementById('invite-password').value;
+    try {
+      const res = await fetch(`${AUTH_URL}/auth/invite/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ token, password }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.message ?? 'Could not accept invite');
+      persistSession(body);
+      window.history.replaceState({}, '', window.location.pathname);
+      await enterApp();
+    } catch (err) {
+      showMsg(els.inviteError, err.message ?? 'Could not accept invite');
+    }
+  });
+}
+
+if (inviteToken) {
+  loadInvitePanel(inviteToken);
+} else if (params.get('access_token')) {
   persistSession({
     access_token: params.get('access_token'),
     refresh_token: params.get('refresh_token'),

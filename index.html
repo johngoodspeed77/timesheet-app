@@ -16,6 +16,16 @@
     </header>
 
     <main>
+      <section id="invite-panel" class="card" hidden>
+        <h1>Accept invite</h1>
+        <p class="muted" id="invite-email-label">Loading invite…</p>
+        <form id="invite-form">
+          <input id="invite-password" type="password" placeholder="Choose password (8+)" minlength="8" required autocomplete="new-password" />
+          <button type="submit">Create account</button>
+        </form>
+        <div id="invite-error" class="error" hidden></div>
+      </section>
+
       <section id="auth-panel" class="card">
         <h1>Timesheet App</h1>
         <p class="muted">Log your hours Mon–Sun and email your boss at week end.</p>
