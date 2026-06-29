@@ -94,8 +94,19 @@ button.sm { width: auto; min-height: 40px; padding: 0.4rem 0.75rem; font-size: 0
 .week-nav { display: flex; align-items: center; gap: 0.75rem; }
 .week-nav h2 { margin: 0; font-size: 1rem; }
 .toolbar-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-.toolbar-actions--top { margin-left: auto; justify-content: flex-end; }
+.toolbar-actions--top { margin-left: auto; justify-content: flex-end; flex-shrink: 0; }
 .toolbar-actions--top button { white-space: nowrap; }
+
+#submit-week {
+  width: auto;
+  min-width: max-content;
+  max-width: 100%;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
 
 .footer-actions {
   display: flex;
@@ -206,11 +217,15 @@ h1, h2, h3 { margin-top: 0; }
 
   .toolbar-actions--top {
     width: 100%;
+    margin-left: 0;
     justify-content: stretch;
   }
 
-  .toolbar-actions--top button {
+  .toolbar-actions--top button,
+  #submit-week {
     width: 100%;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .footer-actions {
@@ -248,4 +263,9 @@ h1, h2, h3 { margin-top: 0; }
 @media (max-width: 380px) {
   .day-line-stats { font-size: 0.8125rem; }
   button.sm { padding: 0.35rem 0.5rem; font-size: 0.8125rem; }
+  #submit-week {
+    font-size: 0.875rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
 }
