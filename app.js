@@ -84,6 +84,7 @@ const els = {
   weeklyReminder: document.getElementById('weekly-reminder'),
   settingsError: document.getElementById('settings-error'),
   settingsSuccess: document.getElementById('settings-success'),
+  hardRefreshBtn: document.getElementById('hard-refresh-btn'),
 };
 
 let enterAppGeneration = 0;
@@ -105,11 +106,44 @@ function clearSession() {
   state.user = null;
 }
 
+function setHardRefreshVisible(visible) {
+  if (els.hardRefreshBtn) els.hardRefreshBtn.hidden = !visible;
+}
+
+async function hardRefresh() {
+  const btn = els.hardRefreshBtn;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Refreshing…';
+  }
+
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((key) => caches.delete(key)));
+    }
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((reg) => reg.unregister()));
+    }
+  } catch {
+    /* still reload */
+  }
+
+  const url = new URL(window.location.href);
+  url.searchParams.delete('access_token');
+  url.searchParams.delete('refresh_token');
+  url.searchParams.delete('invite_token');
+  url.searchParams.set('_', String(Date.now()));
+  window.location.replace(url.pathname + url.search + url.hash);
+}
+
 function showAuthPanel() {
   if (els.invitePanel) els.invitePanel.hidden = true;
   els.authPanel.hidden = false;
   els.appPanel.hidden = true;
   els.settingsPanel.hidden = true;
+  setHardRefreshVisible(true);
 }
 
 function showInvitePanel() {
@@ -117,6 +151,7 @@ function showInvitePanel() {
   els.authPanel.hidden = true;
   els.appPanel.hidden = true;
   els.settingsPanel.hidden = true;
+  setHardRefreshVisible(true);
 }
 
 function showAppPanel() {
@@ -124,6 +159,7 @@ function showAppPanel() {
   els.authPanel.hidden = true;
   els.settingsPanel.hidden = true;
   els.appPanel.hidden = false;
+  setHardRefreshVisible(false);
 }
 
 function weekEntries() {
@@ -425,6 +461,12 @@ async function enterApp(freshSession = null) {
   );
 }
 
+if (els.hardRefreshBtn) {
+  els.hardRefreshBtn.addEventListener('click', () => {
+    hardRefresh();
+  });
+}
+
 document.getElementById('prev-week').addEventListener('click', async () => {
   state.weekStart = addDays(state.weekStart, -7);
   try {
@@ -534,9 +576,7 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
   const { refreshToken } = loadTokens();
   await client.auth.signOut(refreshToken ?? undefined);
   clearSession();
-  els.authPanel.hidden = false;
-  els.appPanel.hidden = true;
-  els.settingsPanel.hidden = true;
+  showAuthPanel();
   els.status.textContent = 'Signed out';
 });
 
@@ -734,5 +774,5 @@ document.addEventListener('visibilitychange', () => {
 });
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js?v=19').catch(() => {});
+  navigator.serviceWorker.register('/sw.js?v=20').catch(() => {});
 }

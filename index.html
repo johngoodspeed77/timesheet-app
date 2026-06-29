@@ -6,13 +6,18 @@
     <meta name="theme-color" content="#06080c" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>Timesheet App</title>
-    <link rel="stylesheet" href="/styles.css?v=7" />
+    <link rel="stylesheet" href="/styles.css?v=8" />
     <script src="/config.js"></script>
   </head>
   <body class="shell">
     <header>
       <div class="brand"><span class="hex"></span> Timesheet App</div>
-      <span id="status" class="muted">Signed out</span>
+      <div class="header-actions">
+        <button type="button" id="hard-refresh-btn" class="ghost sm header-refresh" title="Clear cached app files and reload">
+          ↻ Refresh
+        </button>
+        <span id="status" class="muted">Signed out</span>
+      </div>
     </header>
 
     <main>
@@ -112,6 +117,6 @@
       </section>
     </main>
 
-    <script type="module" src="/app.js?v=19"></script>
+    <script type="module" src="/app.js?v=20"></script>
   </body>
 </html>
