@@ -1,93 +1,99 @@
-# Save point — v0.1.0-local-mvp
+# Save point — v0.2.0-production
 
-**Date:** 2026-06-28  
-**Git tag:** `v0.1.0-local-mvp` (create after commit when ready)  
-**Workspace:** `E:\White Lynx Projects\Work Stuff\Timeshhet App`
+**Date:** 2026-06-29  
+**Git tag:** `v0.2.0-production`  
+**Repository:** https://github.com/johngoodspeed77/timesheet-app  
+**Branch:** `main`
 
 ## Milestone summary
 
-Local-development MVP is **complete**. SupaDupaBase backend extensions and Timesheet App PWA are wired for local dev. Production VM deployment is **not started**.
+**Production PWA is live** on VM101 at https://timesheet.whitelynx.co.nz, backed by SupaDupaBase on VM106 (Option B). Invite-only sign-in, inline day editing, persistent login, and week submit are working. Service worker **v20**.
+
+## Production (live)
+
+| Item | Value |
+|------|--------|
+| Public URL | https://timesheet.whitelynx.co.nz |
+| VM | `johngoodspeed@192.168.1.19` (VM101) |
+| Deploy path | `/opt/timesheet-app` |
+| Backend | https://supadupabase.whitelynx.co.nz (VM106) |
+| Auth mode | **Invite-only** — no public sign-up; admin invites via SupaDupaBase |
+
+**Redeploy after code changes on VM101:**
+
+```bash
+cd /opt/timesheet-app
+git pull
+DOCKER_BUILDKIT=0 docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build
+```
 
 ## What works
 
-- **Timesheet App PWA** at http://localhost:5180
-  - Sign up / sign in / Google OAuth (via SupaDupaBase)
-  - Settings: boss email, employee name
-  - Mon–Sun week view with prev/next navigation
-  - Add / edit / delete daily entries (start/finish, 30 min lunch)
-  - Week totals: hours, regular, OT, paid equivalent
-  - Submit button → mail-service (requires SMTP configured)
-- **SupaDupaBase extensions** (sibling repo)
-  - Migration `002_timesheet.sql`
-  - Data API tables: `user_settings`, `time_entries`, `week_submissions`
-  - `mail-service` on port 3004
+- Email/password sign-in (invited users only)
+- Admin invite acceptance (`?invite_token=…`)
+- Persistent login (`lib/session.js` — localStorage + refresh)
+- Mon–Fri auto-fill from default start (8:00 → 16:30 clock, 8 h worked after lunch)
+- Inline per-day editing (start/finish, Save/Delete on each row)
+- 15-minute quarter-hour time steps (iOS-friendly)
+- Week navigation, totals, overtime display with lunch breakdown
+- Settings: boss email, display name, default start, weekly reminder toggle
+- Submit week → email boss + lock week (unlock available)
+- **↻ Refresh** button on sign-in header — clears SW cache and reloads
+- Hours regression tests (`npm test`)
 
-## Not done yet
+## Key commits (v0.1.0 → this save point)
 
-- Proxmox VM provisioning
-- Cloudflare Tunnel for `timesheet.whitelynx.co.nz`
-- Production SMTP on VM
-- End-to-end email test with real mail server
-- Docker service for Timesheet App in production stack
+| Commit | Summary |
+|--------|---------|
+| `130f3c2` | Option B — PWA on VM101, API on VM106 |
+| `d6f1be4` | Admin invite link acceptance |
+| `37e8be0` | Inline day row editing |
+| `b6dffc2` | Invite-only UI; null-safe messages |
+| `2af6ebd` | Fix sign-in race (stale session restore) |
+| `7c302a9` | Hard refresh button on sign-in |
 
-## Restore / run from this save point
+## Cache versions (this save point)
 
-### SupaDupaBase
+| Asset | Version |
+|-------|---------|
+| `app.js` | `?v=20` |
+| `sw.js` | `?v=20` (`timesheet-app-v20`) |
+| `styles.css` | `?v=8` |
+
+## Environment (VM101 `infra/.env`)
+
+| Variable | Purpose |
+|----------|---------|
+| `SDB_PUBLIC_URL` | `https://supadupabase.whitelynx.co.nz` |
+| `SDB_PROXY` | `0` — browser calls VM106 directly |
+| `VAPID_PUBLIC_KEY` | Web Push subscribe (from VM106) |
+
+## Troubleshooting
+
+- **Sign-in appears dead:** Tap **↻ Refresh** on the sign-in page (clears service worker + caches).
+- **Stale app after deploy:** Hard refresh or re-open PWA; SW uses network-first for JS/HTML.
+- **Submit fails:** Check boss email in Settings and SMTP on VM106.
+
+## Restore / run locally
 
 ```bash
-cd "E:/White Lynx Projects/Cursor/supadupabase"
-npm install && npm run build
-cp .env.example .env
-# Set ADMIN_EMAILS, AUTH_SECRET, and SMTP_* for submit testing
-docker compose -f infra/docker-compose.dev.yml up -d
-npm run migrate
-npm run dev
-```
-
-### Timesheet App
-
-```bash
-cd "E:/White Lynx Projects/Work Stuff/Timeshhet App"
+git clone https://github.com/johngoodspeed77/timesheet-app.git
+cd timesheet-app
+git checkout v0.2.0-production
 npm install
+# Start SupaDupaBase locally first (see supadupabase README)
 npm run dev
 ```
 
 Open http://localhost:5180
 
-## File map (Timesheet App)
+## Not done / follow-up
 
-| File | Purpose |
-|------|---------|
-| `index.html` | App shell, auth + week UI + settings |
-| `app.js` | Auth, CRUD, submit, week navigation |
-| `hours.js` | Overtime / paid-hours calculator |
-| `styles.css` | Cyan Hexagons theme (SupaDupaBase style) |
-| `manifest.webmanifest` | PWA install metadata |
-| `sw.js` | Offline app shell cache |
-| `src/server.ts` | Static file server (:5180) |
-
-## File map (SupaDupaBase changes)
-
-| File | Purpose |
-|------|---------|
-| `packages/db/migrations/002_timesheet.sql` | Schema + RLS |
-| `apps/data-api/src/config.ts` | Table whitelist |
-| `apps/mail-service/` | Weekly email submit service |
-| `infra/Caddyfile` | `/mail/*` route |
-| `infra/docker-compose.yml` | mail-service container |
-
-## Overtime formula (v1)
-
-```
-worked       = max(0, (finish - start) - 0.5)
-day_rate     = Mon–Fri 1.0 | Sat 1.5 | Sun 2.0
-regular      = min(worked, 8)
-daily_ot     = max(0, worked - 8)
-paid_regular = regular × day_rate
-paid_ot      = daily_ot × day_rate × 1.5
-total_paid   = paid_regular + paid_ot
-```
+- Google OAuth button removed from UI (invite-only); re-enable only if needed
+- Data API date-range filters (client loads all user entries)
+- Integration tests for submit flow and RLS
+- License
 
 ## Last updated
 
-2026-06-28
+2026-06-29

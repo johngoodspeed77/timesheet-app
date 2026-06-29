@@ -13,13 +13,14 @@
 
 **GitHub (this repo):** `johngoodspeed77/timesheet-app`
 
-## Current stage — Option B split-VM (2026-06-29)
+## Current stage — v0.2.0-production (2026-06-29)
 
-**Timesheet (VM101):** https://timesheet.whitelynx.co.nz · LAN http://192.168.1.19:5180  
-**SupaDupaBase (VM106):** https://supadupabase.whitelynx.co.nz · `192.168.1.112`
+**Timesheet (VM101):** https://timesheet.whitelynx.co.nz · deploy `/opt/timesheet-app`  
+**SupaDupaBase (VM106):** https://supadupabase.whitelynx.co.nz · `supadupabase@192.168.1.112`
 
 Browser loads PWA from VM101; auth/data/mail call VM106 directly (`SDB_PROXY=0`).  
-**One Cursor workspace:** `E:\White Lynx Projects\Cursor\whitelynx.code-workspace`
+**Auth:** invite-only (no public sign-up UI; `INVITE_ONLY=1` on VM106).  
+**Save point:** `v0.2.0-production` · SW **v20** · `app.js?v=20`
 
 ### Completed since v0.1.0-local-mvp
 
@@ -27,34 +28,29 @@ Browser loads PWA from VM101; auth/data/mail call VM106 directly (`SDB_PROXY=0`)
 - [x] Cloudflare tunnel — `timesheet.whitelynx.co.nz`
 - [x] Persistent login — `lib/session.js` (localStorage + refresh)
 - [x] Default shift: **8:00 AM start**, finish **16:30** on clock (8 h worked after 30 min lunch)
-- [x] **Mon–Fri auto-fill** for current week (`ensureDefaultWeekdayEntries` in `app.js`); Sat/Sun manual
-- [x] Mobile-responsive CSS (safe areas, 44px tap targets, stacked toolbar/day rows)
-- [x] Weekly reminder — client `reminders.js`, SW push handlers, Settings checkbox
-- [x] SupaDupaBase migrations `005_weekly_reminders.sql`, `006_default_start_8am.sql`
-- [x] Mail-service push routes + `infra/send-weekly-reminders.sh` cron (Sunday 3pm NZ)
-- [x] VAPID keys on VM101; cron scheduled
-- [x] Auth UX fixes — explicit login errors, session restore `.catch()`, signup duplicate-email message
-- [x] Service worker v10 — network-first for JS/HTML; push notification handlers
-- [x] **Login fix (2026-06-28):** duplicate `const end` in `updateWeekUI()` caused `SyntaxError` — entire `app.js` failed to load; Sign in appeared dead with no error. Fixed → renamed `weekEnd` / `shiftEnd`.
-- [x] **Proxy fix (2026-06-29):** strip `Expect` header on `:5180` reverse proxy (undici rejected it → login 500 from some clients).
-- [x] **Data isolation (2026-06-29):** data-api enforces `user_id` / `id` scope per table; client filters entries/submissions/settings.
+- [x] **Mon–Fri auto-fill**; **inline row editing** (Save/Delete per day)
+- [x] Quarter-hour time steps (`step="900"`) for iOS
+- [x] Mobile-responsive CSS; black background; toolbar/footer layout
+- [x] Weekly reminder client + SW push handlers
+- [x] Admin invite acceptance (`?invite_token=`)
+- [x] **Invite-only UI** — sign-up + Google button removed
+- [x] **Login race fix** — fresh login no longer cleared by stale session restore
+- [x] **↻ Refresh** button on sign-in — clears SW cache
+- [x] Hours regression tests (`npm test`)
+- [x] Service worker network-first for JS/HTML (v20)
 
-### Verified working (VM101)
+### Verified working (production)
 
-- Sign up / sign in (email/password)
-- Load week, auto-fill Mon–Fri, edit/save days
-- E2E test user: `e2e-test@whitelynx.test` / `E2eTestPass123!`
-- Real user exists: `jesse@fuzedgroup.com` (use Sign in, not Sign up)
+- Sign in (invited users), persistent session restore
+- Load week, auto-fill Mon–Fri, inline edit/save days, submit week
+- Real user: `jesse@fuzedgroup.com`
 
 ### Not done / follow-up
 
-- [ ] **VM101 redeploy** — Option B `infra/.env` (`SDB_PROXY=0`, `SDB_PUBLIC_URL=https://supadupabase.whitelynx.co.nz`)
-- [ ] **VM106 migration** — `007_timesheet_public_origins.sql`
-- [ ] **Google OAuth** — redirect for `timesheet.whitelynx.co.nz`
-- [ ] **Data API date-range filters** — client still loads all entries (scoped to user)
-- [ ] Integration tests (RLS lock, submit flow, auto-fill)
-- [ ] Commit/push SupaDupaBase data-api scoping fix to GitHub
-- [ ] Tag release after public URL works
+- [ ] **Data API date-range filters** — client loads all user entries
+- [ ] **Google OAuth** — optional; removed from UI while invite-only
+- [ ] Integration tests (RLS lock, submit flow)
+- [ ] License
 
 ## Confirmed decisions
 
