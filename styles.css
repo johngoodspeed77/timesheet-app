@@ -1,5 +1,5 @@
 :root {
-  --bg: #06080c;
+  --bg: #000000;
   --card: #111827;
   --cyan: #22d3ee;
   --text: #e2e8f0;
@@ -18,9 +18,7 @@ body {
   margin: 0;
   font-family: system-ui, sans-serif;
   color: var(--text);
-  background-color: var(--bg);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='42' height='25' viewBox='0 0 42 25'%3E%3Cg fill='none' stroke='%2322d3ee' stroke-opacity='0.08' stroke-width='0.75'%3E%3Cpolygon points='28,12.124 21,24.248 7,24.248 0,12.124 7,0 21,0'/%3E%3Cpolygon points='49,12.124 42,24.248 28,24.248 21,12.124 28,0 42,0'/%3E%3Cpolygon points='17.5,24.248 10.5,36.372 -3.5,36.372 -10.5,24.248 -3.5,12.124 10.5,12.124'/%3E%3Cpolygon points='38.5,24.248 31.5,36.372 17.5,36.372 10.5,24.248 17.5,12.124 31.5,12.124'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: 42px 25px;
+  background: #000000;
   min-height: 100dvh;
   overflow-x: clip;
 }
