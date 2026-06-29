@@ -265,14 +265,20 @@ async function loadData() {
   if (submissionsRes.error) throw new Error(submissionsRes.error.message);
   if (settingsRes.error) throw new Error(settingsRes.error.message);
 
+  const uid = state.user?.id;
   state.entries = (entriesRes.data ?? [])
+    .filter((e) => !uid || e.user_id === uid)
     .map((e) => ({ ...e, work_date: normalizeDate(e.work_date) }))
     .sort((a, b) => a.work_date.localeCompare(b.work_date));
-  state.submissions = (submissionsRes.data ?? []).map((s) => ({
+  state.submissions = (submissionsRes.data ?? [])
+    .filter((s) => !uid || s.user_id === uid)
+    .map((s) => ({
     ...s,
     week_start: normalizeDate(s.week_start),
   }));
-  applySettingsToState(settingsRes.data?.[0] ?? null);
+  applySettingsToState(
+    (settingsRes.data ?? []).find((s) => !uid || s.user_id === uid) ?? null,
+  );
 
   await ensureDefaultWeekdayEntries();
   updateWeekUI();
@@ -512,7 +518,10 @@ document.getElementById('settings-btn').addEventListener('click', async () => {
   try {
     const settingsRes = await client.from('user_settings').select('*');
     if (settingsRes.error) throw new Error(settingsRes.error.message);
-    applySettingsToState(settingsRes.data?.[0] ?? null);
+    const uid = state.user?.id;
+    applySettingsToState(
+      (settingsRes.data ?? []).find((s) => !uid || s.user_id === uid) ?? null,
+    );
   } catch (err) {
     showMsg(els.settingsError, err.message ?? 'Failed to load settings');
   }

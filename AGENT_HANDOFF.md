@@ -32,6 +32,8 @@ SupaDupaBase stack runs on the same VM (`192.168.1.19:80` via Caddy). Timesheet 
 - [x] Auth UX fixes — explicit login errors, session restore `.catch()`, signup duplicate-email message
 - [x] Service worker v10 — network-first for JS/HTML; push notification handlers
 - [x] **Login fix (2026-06-28):** duplicate `const end` in `updateWeekUI()` caused `SyntaxError` — entire `app.js` failed to load; Sign in appeared dead with no error. Fixed → renamed `weekEnd` / `shiftEnd`.
+- [x] **Proxy fix (2026-06-29):** strip `Expect` header on `:5180` reverse proxy (undici rejected it → login 500 from some clients).
+- [x] **Data isolation (2026-06-29):** data-api enforces `user_id` / `id` scope per table; client filters entries/submissions/settings.
 
 ### Verified working (VM101)
 
@@ -42,13 +44,14 @@ SupaDupaBase stack runs on the same VM (`192.168.1.19:80` via Caddy). Timesheet 
 
 ### Not done / follow-up
 
-- [ ] **Cloudflare Tunnel** — `timesheet.whitelynx.co.nz` → `http://192.168.1.19:5180`
-- [ ] **Production SMTP** — confirm week submit email with real mail server on VM
+- [ ] **Cloudflare Tunnel** — add public hostname `timesheet.whitelynx.co.nz` → `http://192.168.1.19:5180` in Zero Trust (see DEPLOY_VM101.md). `supadupabase.whitelynx.co.nz` is already public; timesheet DNS not created yet.
+- [ ] **VM101 cloudflared token** — container reports invalid `TUNNEL_TOKEN` (public URL may use another tunnel instance); refresh token if needed.
+- [x] **Production SMTP** — week submit tested 2026-06-29; email sent to `johngoodspeed77@gmail.com` for e2e user week `2026-06-22`.
 - [ ] **Google OAuth** production redirect for public timesheet URL
-- [ ] **RLS audit** — earlier testing saw `time_entries` GET returning all users' rows in some cases; client does not filter by `user_id`. Verify/fix in data-api.
-- [ ] **Data API date-range filters** — client still loads all entries
+- [x] **RLS audit** — fixed in data-api: app-level `user_id` scoping (DB superuser bypassed RLS). Client also filters by `user_id`.
+- [ ] **Data API date-range filters** — client still loads all entries (now scoped to user)
 - [ ] Integration tests (RLS lock, submit flow, auto-fill)
-- [ ] Commit/push SupaDupaBase side changes if not already on GitHub
+- [ ] Commit/push SupaDupaBase data-api scoping fix to GitHub
 - [ ] Tag release after public URL works
 
 ## Confirmed decisions
@@ -122,11 +125,11 @@ curl http://192.168.1.19:5180/
 
 ## Next work (recommended order)
 
-1. **User validation** — Jesse confirms login + auto-fill on desktop after hard refresh (Ctrl+Shift+R)
-2. **RLS** — confirm `time_entries` SELECT is scoped to `auth.uid()` in data-api; add client-side `user_id` filter as defense
-3. **SMTP** — test week submit email end-to-end on VM
-4. **Cloudflare Tunnel** — public hostname for timesheet + update `SDB_PUBLIC_URL` / OAuth redirects
-5. **SupaDupaBase repo** — ensure migrations 005/006 and mail push code are committed and deployed consistently
+1. **Cloudflare** — add `timesheet.whitelynx.co.nz` public hostname on tunnel (DEPLOY_VM101.md §3)
+2. **User validation** — Jesse confirms login + auto-fill on desktop (hard refresh Ctrl+Shift+R)
+3. **Google OAuth** — add `https://timesheet.whitelynx.co.nz` redirect when public URL is live
+4. **SupaDupaBase repo** — commit/push data-api user scoping; refresh `TUNNEL_TOKEN` on VM if cloudflared should run locally
+5. **Data API** — optional date-range filters to reduce payload size
 
 ## Related docs
 
@@ -137,4 +140,4 @@ curl http://192.168.1.19:5180/
 
 ## Last updated
 
-2026-06-28 — VM101 LAN deploy; Mon–Fri auto-fill; weekly reminders; login syntax fix deployed. Pick up: public URL, SMTP e2e, RLS audit.
+2026-06-29 — Proxy + RLS fixes deployed; SMTP submit verified; cloudflared docs updated. Pick up: timesheet public hostname.

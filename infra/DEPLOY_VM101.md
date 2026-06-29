@@ -68,10 +68,34 @@ Open http://192.168.1.19:5180
 
 ### 3. Public access
 
-**Option A — Cloudflare Tunnel** (recommended in SupaDupaBase docs)
+**Option A — Cloudflare Tunnel** (recommended)
 
-- `supadupabase.whitelynx.co.nz` → `http://caddy:80` (tunnel on VM101)
-- `timesheet.whitelynx.co.nz` → `http://192.168.1.19:5180`
+SupaDupaBase tunnel is already live at `https://supadupabase.whitelynx.co.nz` when `TUNNEL_TOKEN` is set and cloudflared is running:
+
+```bash
+cd /opt/supadupabase
+docker compose -f infra/docker-compose.yml --env-file .env --profile tunnel up -d cloudflared
+```
+
+Add a **second public hostname** on the same tunnel (Cloudflare Zero Trust → Networks → Tunnels → your tunnel → Public Hostname):
+
+| Field | Value |
+|-------|--------|
+| Subdomain | `timesheet` |
+| Domain | `whitelynx.co.nz` |
+| Type | HTTP |
+| URL | `http://192.168.1.19:5180` |
+
+Cloudflare DNS should auto-create a CNAME for `timesheet.whitelynx.co.nz` when you save the hostname. If not, add a CNAME pointing at `<tunnel-id>.cfargotunnel.com`.
+
+Verify:
+
+```bash
+curl https://supadupabase.whitelynx.co.nz/auth/healthz
+curl -I https://timesheet.whitelynx.co.nz/
+```
+
+The timesheet PWA uses **same-origin** proxying on `:5180`, so the public timesheet URL does not need separate `__SDB_*_URL` values — auth/rest/mail are proxied through the timesheet container.
 
 **Option B — Nginx Proxy Manager (VM104)**
 

@@ -54,9 +54,16 @@ async function proxyRequest(req: IncomingMessage, res: ServerResponse, url: URL)
   if (!upstream) return false;
 
   const targetUrl = `${upstream}${url.pathname}${url.search}`;
+  const skipHeaders = new Set([
+    'host',
+    'connection',
+    'expect',
+    'keep-alive',
+    'transfer-encoding',
+  ]);
   const headers = new Headers();
   for (const [key, value] of Object.entries(req.headers)) {
-    if (!value || key === 'host' || key === 'connection') continue;
+    if (!value || skipHeaders.has(key.toLowerCase())) continue;
     headers.set(key, Array.isArray(value) ? value.join(', ') : value);
   }
 
