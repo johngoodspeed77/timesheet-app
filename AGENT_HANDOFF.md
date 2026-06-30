@@ -13,14 +13,20 @@
 
 **GitHub (this repo):** `johngoodspeed77/timesheet-app`
 
-## Current stage — v0.3.0-production (2026-06-30)
+## Current stage — v0.3.1-production (2026-06-30)
 
-**Timesheet (VM101):** https://timesheet.whitelynx.co.nz · deploy `/opt/timesheet-app`  
-**SupaDupaBase (VM106):** https://supadupabase.whitelynx.co.nz · `supadupabase@192.168.1.112`
+**Timesheet (VM101):** https://timesheet.whitelynx.co.nz · deploy `/opt/timesheet-app` · PWA tag `v0.3.0-production` (`fcae809`)  
+**SupaDupaBase (VM106):** https://supadupabase.whitelynx.co.nz · `supadupabase@192.168.1.112` · tag `v0.2.2-production`
 
 Browser loads PWA from VM101; auth/data/mail call VM106 directly (`SDB_PROXY=0`).  
 **Auth:** invite-only (no public sign-up UI; `INVITE_ONLY=1` on VM106).  
-**Save point:** `v0.3.0-production` · SW **v29** · `app.js?v=28` · `hours.js?v=28` · `styles.css?v=13`
+**Save point:** `v0.3.1-production` · SW **v29** · `app.js?v=28` · `hours.js?v=28` · `styles.css?v=13`
+
+### Completed since v0.3.0-production
+
+- [x] **Boss email From** — `"Employee Name" <user@email>` + `Reply-To` (SupaDupaBase `92c1e2b`; SMTP envelope `SMTP_FROM`)
+- [x] **Fuzed Group branding** — email title **Fuzed Group- Employee Weekly Timesheet** (SupaDupaBase `fe60026`)
+- [x] **Email subject** — **Week ending** + Sunday date (SupaDupaBase mail-service)
 
 ### Completed since v0.2.0-production
 
@@ -59,8 +65,8 @@ Browser loads PWA from VM101; auth/data/mail call VM106 directly (`SDB_PROXY=0`)
 | Row modes | **Work** · **Day off** · **Leave** (leave sub-types exclude day off) |
 | Daily entry | Work: start/finish + 30 min lunch; Leave: type + duration |
 | Overtime | >8h/day; Sat 1.5×, Sun 2×; display as 8h + OT hours |
-| Boss email | Per user in Settings |
-| Week submit | Sends email then **locks** week (unlock button available) |
+| Boss email | **Week ending** Sunday in subject; **From** = employee, **Reply-To** = employee login |
+| Week submit | Fuzed Group HTML email to boss, then **locks** week (unlock available) |
 | Hosting | VM101 PWA; backend VM106 (`supadupabase.whitelynx.co.nz`) |
 | UI stack | Vanilla HTML/CSS/JS — no React |
 | VM deploy | `DOCKER_BUILDKIT=0` required on VM101 |
@@ -127,6 +133,15 @@ curl -s https://timesheet.whitelynx.co.nz/ | head
 - [SupaDupaBase docs/STACK.md](../../Cursor/supadupabase/docs/STACK.md)
 - [SupaDupaBase AGENT_HANDOFF.md](../../Cursor/supadupabase/AGENT_HANDOFF.md)
 
+## VM106 mail redeploy
+
+```bash
+ssh supadupabase@192.168.1.112
+cd ~/supadupabase
+git pull
+docker compose -f infra/docker-compose.yml --env-file .env up -d --build mail-service
+```
+
 ## Last updated
 
-2026-06-30 — v0.3.0-production: leave/day-off rows, sign-in cache fixes, mobile CSS, deployed VM101.
+2026-06-30 — v0.3.1-production: Fuzed Group boss email branding + employee From/Reply-To (SupaDupaBase mail-service).

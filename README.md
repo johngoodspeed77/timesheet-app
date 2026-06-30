@@ -8,7 +8,7 @@ Weekly timesheet PWA — log start/finish times Mon–Sun, track overtime and le
 
 ## Status
 
-**Save point `v0.3.0-production`** (2026-06-30) — **production live.** Invite-only sign-in, work/day-off/leave rows, mobile layout, persistent login, week submit.
+**Save point `v0.3.1-production`** (2026-06-30) — **production live.** Invite-only sign-in, work/day-off/leave rows, mobile layout, persistent login, week submit, **Fuzed Group** boss email branding with employee **From** / **Reply-To**.
 
 | Done | Follow-up |
 |------|-----------|
@@ -21,6 +21,8 @@ Weekly timesheet PWA — log start/finish times Mon–Sun, track overtime and le
 | Sign-in race + stale `hours.js` cache fixes | |
 | **Mobile-responsive** layout (375px / 320px tested) | |
 | **↻ Refresh** cache button on sign-in | |
+| Boss email **From** employee + Fuzed Group title (SupaDupaBase mail) | |
+| Subject uses **Week ending** + Sunday date | |
 
 Details: [SAVEPOINT.md](./SAVEPOINT.md) · Handoff: [AGENT_HANDOFF.md](./AGENT_HANDOFF.md) · Stack: [SupaDupaBase STACK.md](../Cursor/supadupabase/docs/STACK.md)
 
@@ -82,7 +84,7 @@ On VM101 the PWA is static-only; API calls go to VM106. `config.js` is generated
 | Overtime | >8 h/day OT; Sat 1.5×, Sun 2×; row shows **8.00h + X.XXh OT** when OT applies |
 | Week view | Mon–Sun navigation with worked / regular / OT / leave totals |
 | Settings | Boss email, display name, default start time, weekly reminder toggle |
-| Submit | Emails boss HTML timesheet; locks the week |
+| Submit | Emails boss HTML timesheet (**Fuzed Group- Employee Weekly Timesheet**); **From** shows employee name + email; locks the week |
 | Reminders | Optional Sunday 3:00 PM NZ push (VAPID + cron on VM106) |
 | Refresh | **↻ Refresh** on sign-in — clears SW cache when app feels stuck |
 | Mobile | Full-width buttons, stacked day rows, no horizontal scroll on narrow phones |
@@ -111,6 +113,7 @@ Timesheet App requires SupaDupaBase with:
 - **Sign-in greyed out / does nothing:** Tap **↻ Refresh** on the sign-in page. Often a stale service-worker `hours.js` vs `app.js` mismatch.
 - **Invalid password:** Production is invite-only — use the account your admin invited.
 - **Submit fails:** Check SupaDupaBase `SMTP_*` env vars and boss email in Settings.
+- **Boss sees "via gmail.com":** Normal when `From` domain is not a Gmail send-as alias; **Reply-To** is still the employee.
 - **Reminders:** Enable in Settings, allow notifications, install PWA; VM106 needs VAPID keys and Sunday cron.
 - **Layout looks wrong on phone:** Hard refresh after deploy; cache is `styles.css?v=13` / SW v29.
 
