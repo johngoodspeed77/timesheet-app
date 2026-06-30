@@ -143,7 +143,7 @@ button.sm { width: auto; min-height: 40px; padding: 0.4rem 0.75rem; font-size: 0
   display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;
 }
 @media (min-width: 600px) {
-  .totals-grid { grid-template-columns: repeat(4, 1fr); }
+  .totals-grid { grid-template-columns: repeat(3, 1fr); }
 }
 .totals-grid .label { display: block; font-size: 0.75rem; color: var(--muted); }
 .totals-grid strong { font-size: 1.25rem; color: var(--cyan); }
@@ -187,7 +187,6 @@ button.sm { width: auto; min-height: 40px; padding: 0.4rem 0.75rem; font-size: 0
   gap: 0.35rem 0.5rem;
   min-width: 0;
 }
-.day-line-stats .paid { color: var(--cyan); }
 .day-line-stats .day-lunch-hint { flex: 1 1 100%; font-size: 0.75rem; }
 .day-row-actions { display: flex; flex-shrink: 0; gap: 0.35rem; align-items: center; }
 .day-row-actions button { width: auto; margin: 0; }

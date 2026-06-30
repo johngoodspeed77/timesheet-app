@@ -73,7 +73,6 @@ const els = {
   totalWorked: document.getElementById('total-worked'),
   totalRegular: document.getElementById('total-regular'),
   totalOt: document.getElementById('total-ot'),
-  totalPaid: document.getElementById('total-paid'),
   weekHoursHint: document.getElementById('week-hours-hint'),
   submitWeek: document.getElementById('submit-week'),
   submitError: document.getElementById('submit-error'),
@@ -237,7 +236,6 @@ function statsHtml(workDate, start, end) {
   return `
     <span>${formatHours(day.worked)}h</span>
     ${otPart}
-    <span class="paid">· ${formatHours(day.totalPaid)} paid</span>
     ${lunchHint}
   `;
 }
@@ -312,7 +310,6 @@ function updateWeekUI() {
   els.totalWorked.textContent = formatHours(week.totalWorked);
   els.totalRegular.textContent = formatHours(week.totalRegular);
   els.totalOt.textContent = formatHours(week.totalOt);
-  els.totalPaid.textContent = formatHours(week.totalPaid);
 
   const defaultStart = normalizeTime(state.settings?.default_start_time) || DEFAULT_START_TIME;
   const { end: shiftEnd } = defaultShiftTimes(state.settings);
@@ -774,5 +771,5 @@ document.addEventListener('visibilitychange', () => {
 });
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js?v=20').catch(() => {});
+  navigator.serviceWorker.register('/sw.js?v=21').catch(() => {});
 }
