@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#06080c" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>Timesheet App</title>
-    <link rel="stylesheet" href="/styles.css?v=9" />
+    <link rel="stylesheet" href="/styles.css?v=10" />
     <script src="/config.js"></script>
   </head>
   <body class="shell">
@@ -70,12 +70,13 @@
             <div><span class="label">Hours worked</span><strong id="total-worked">0.00</strong></div>
             <div><span class="label">Regular</span><strong id="total-regular">0.00</strong></div>
             <div><span class="label">Overtime</span><strong id="total-ot">0.00</strong></div>
+            <div><span class="label">Leave hours</span><strong id="total-leave">0.00</strong></div>
           </div>
         </section>
 
         <section class="card">
           <h3>Daily entries</h3>
-          <p class="hint muted">Mon–Fri auto-fill a 40-hour week (8 h/day from your default start, incl. lunch). Adjust start/finish in each row and tap Save.</p>
+          <p class="hint muted">Mon–Fri auto-fill work days. Switch a row to Leave for day off, non-paid leave, or paid leave (full 8h / AM or PM 4h).</p>
           <div id="days-list" class="days-list"></div>
         </section>
 
@@ -116,6 +117,6 @@
       </section>
     </main>
 
-    <script type="module" src="/app.js?v=21"></script>
+    <script type="module" src="/app.js?v=22"></script>
   </body>
 </html>

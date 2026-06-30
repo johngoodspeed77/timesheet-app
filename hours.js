@@ -137,6 +137,62 @@ export function addDays(dateStr, days) {
   return d.toISOString().slice(0, 10);
 }
 
+export const LEAVE_TYPES = {
+  day_off: { label: 'Day off', paid: false },
+  non_paid_leave: { label: 'Non-paid leave', paid: false },
+  annual_leave: { label: 'Annual leave', paid: true },
+  sick_leave: { label: 'Sick leave', paid: true },
+  medical_leave: { label: 'Medical leave', paid: true },
+  bereavement_leave: { label: 'Bereavement leave', paid: true },
+};
+
+export const LEAVE_DURATIONS = {
+  full: { label: 'Full day', hours: 8 },
+  am: { label: 'AM', hours: 4 },
+  pm: { label: 'PM', hours: 4 },
+};
+
+export function isPaidLeaveType(leaveType) {
+  return Boolean(LEAVE_TYPES[leaveType]?.paid);
+}
+
+export function leaveTypeLabel(leaveType) {
+  return LEAVE_TYPES[leaveType]?.label ?? leaveType;
+}
+
+export function leaveDurationLabel(leaveDuration) {
+  return LEAVE_DURATIONS[leaveDuration]?.label ?? leaveDuration;
+}
+
+export function leaveCreditHours(leaveType, leaveDuration) {
+  if (!isPaidLeaveType(leaveType)) return 0;
+  return LEAVE_DURATIONS[leaveDuration]?.hours ?? 0;
+}
+
+export function entryTypeFor(entry) {
+  return entry?.entry_type === 'leave' ? 'leave' : 'work';
+}
+
+export function calcLeaveDay(entry) {
+  const workDate = normalizeDate(entry.work_date);
+  const leaveType = entry.leave_type;
+  const leaveDuration = entry.leave_duration ?? null;
+  const leaveHours = leaveCreditHours(leaveType, leaveDuration);
+  const label = leaveTypeLabel(leaveType);
+  const durationPart =
+    leaveHours > 0 && leaveDuration ? leaveDurationLabel(leaveDuration) : null;
+
+  return {
+    kind: 'leave',
+    workDate,
+    leaveType,
+    leaveDuration,
+    leaveHours,
+    label,
+    durationPart,
+  };
+}
+
 export function calcDay(workDate, startTime, endTime) {
   const gross = parseTimeToHours(endTime) - parseTimeToHours(startTime);
   const worked = Math.max(0, gross - LUNCH_HOURS);
@@ -146,6 +202,7 @@ export function calcDay(workDate, startTime, endTime) {
   const paidRegular = regular * rate;
   const paidOt = dailyOt * rate * 1.5;
   return {
+    kind: 'work',
     workDate,
     worked,
     regular,
@@ -163,16 +220,22 @@ export function calcWeek(entries, weekStart) {
   for (let i = 0; i < 7; i += 1) {
     const date = addDays(weekStart, i);
     const entry = byDate.get(date);
-    if (entry) {
+    if (!entry) continue;
+    if (entryTypeFor(entry) === 'leave') {
+      days.push(calcLeaveDay(entry));
+    } else {
       days.push(calcDay(date, entry.start_time, entry.end_time));
     }
   }
+  const workDays = days.filter((d) => d.kind === 'work');
+  const leaveDays = days.filter((d) => d.kind === 'leave');
   return {
     days,
-    totalWorked: days.reduce((s, d) => s + d.worked, 0),
-    totalRegular: days.reduce((s, d) => s + d.regular, 0),
-    totalOt: days.reduce((s, d) => s + d.dailyOt, 0),
-    totalPaid: days.reduce((s, d) => s + d.totalPaid, 0),
+    totalWorked: workDays.reduce((s, d) => s + d.worked, 0),
+    totalLeaveHours: leaveDays.reduce((s, d) => s + d.leaveHours, 0),
+    totalRegular: workDays.reduce((s, d) => s + d.regular, 0),
+    totalOt: workDays.reduce((s, d) => s + d.dailyOt, 0),
+    totalPaid: workDays.reduce((s, d) => s + d.totalPaid, 0),
   };
 }
 

@@ -2,10 +2,17 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   LUNCH_HOURS,
+  LEAVE_DURATIONS,
+  LEAVE_TYPES,
   calcDay,
+  calcLeaveDay,
   calcWeek,
   defaultFinishTime,
   formatHours,
+  isPaidLeaveType,
+  leaveCreditHours,
+  leaveDurationLabel,
+  leaveTypeLabel,
   parseTimeToHours,
 } from './hours.js';
 
@@ -68,7 +75,24 @@ describe('calcWeek', () => {
     assert.equal(formatHours(week.totalWorked), '41.50');
     assert.equal(formatHours(week.totalRegular), '40.00');
     assert.equal(formatHours(week.totalOt), '1.50');
-    assert.equal(formatHours(week.totalPaid), '42.25');
+    assert.equal(formatHours(week.totalLeaveHours), '0.00');
+  });
+
+  it('credits paid leave and zero-hour non-paid leave', () => {
+    const weekStart = '2026-06-22';
+    const entries = [
+      { work_date: '2026-06-22', entry_type: 'leave', leave_type: 'annual_leave', leave_duration: 'full' },
+      { work_date: '2026-06-23', entry_type: 'leave', leave_type: 'sick_leave', leave_duration: 'am' },
+      { work_date: '2026-06-24', entry_type: 'leave', leave_type: 'day_off' },
+      { work_date: '2026-06-25', entry_type: 'leave', leave_type: 'non_paid_leave' },
+    ];
+    const week = calcWeek(entries, weekStart);
+    assert.equal(week.totalLeaveHours, 12);
+    assert.equal(leaveCreditHours('annual_leave', 'full'), 8);
+    assert.equal(leaveCreditHours('sick_leave', 'am'), 4);
+    assert.equal(leaveCreditHours('day_off', null), 0);
+    assert.equal(leaveCreditHours('non_paid_leave', null), 0);
+    assert.equal(calcLeaveDay(entries[0]).label, 'Annual leave');
   });
 });
 

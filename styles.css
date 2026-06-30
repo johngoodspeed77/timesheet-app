@@ -143,7 +143,7 @@ button.sm { width: auto; min-height: 40px; padding: 0.4rem 0.75rem; font-size: 0
   display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;
 }
 @media (min-width: 600px) {
-  .totals-grid { grid-template-columns: repeat(3, 1fr); }
+  .totals-grid { grid-template-columns: repeat(4, 1fr); }
 }
 .totals-grid .label { display: block; font-size: 0.75rem; color: var(--muted); }
 .totals-grid strong { font-size: 1.25rem; color: var(--cyan); }
@@ -171,6 +171,29 @@ button.sm { width: auto; min-height: 40px; padding: 0.4rem 0.75rem; font-size: 0
   font-size: 0.875rem;
 }
 .day-time-sep { color: var(--muted); font-weight: 400; flex-shrink: 0; }
+.day-mode,
+.day-leave-type,
+.day-leave-duration {
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  display: inline-block;
+  margin: 0;
+  padding: 0.35rem 0.5rem;
+  min-height: 40px;
+  font-size: 0.875rem;
+}
+.day-work-fields,
+.day-leave-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  min-width: 0;
+}
+.day-leave-fields { flex: 1 1 12rem; }
+.day-leave-fields select { flex: 1 1 8rem; }
+[hidden].day-leave-duration { display: none !important; }
 .day-line-primary .muted { font-weight: 400; }
 .day-line-secondary {
   display: flex;

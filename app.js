@@ -17,9 +17,16 @@ import {
   defaultFinishTime,
   defaultShiftTimes,
   DEFAULT_START_TIME,
+  entryTypeFor,
   formatDateRangeNz,
   formatHours,
   formatWeekday,
+  isPaidLeaveType,
+  LEAVE_DURATIONS,
+  LEAVE_TYPES,
+  leaveCreditHours,
+  leaveDurationLabel,
+  leaveTypeLabel,
   LUNCH_HOURS,
   normalizeDate,
   normalizeTime,
@@ -73,6 +80,7 @@ const els = {
   totalWorked: document.getElementById('total-worked'),
   totalRegular: document.getElementById('total-regular'),
   totalOt: document.getElementById('total-ot'),
+  totalLeave: document.getElementById('total-leave'),
   weekHoursHint: document.getElementById('week-hours-hint'),
   submitWeek: document.getElementById('submit-week'),
   submitError: document.getElementById('submit-error'),
@@ -189,6 +197,7 @@ async function ensureDefaultWeekdayEntries() {
     .map((work_date) => ({
       user_id: state.user.id,
       work_date,
+      entry_type: 'work',
       start_time: startTime,
       end_time: endTime,
       notes: null,
@@ -212,6 +221,9 @@ async function refreshWeekView() {
 
 function defaultTimesForDate(workDate) {
   const entry = state.entries.find((e) => normalizeDate(e.work_date) === workDate);
+  if (entry && entryTypeFor(entry) === 'leave') {
+    return { start: '', end: '' };
+  }
   if (entry) {
     return {
       start: normalizeTime(entry.start_time),
@@ -219,6 +231,51 @@ function defaultTimesForDate(workDate) {
     };
   }
   return defaultShiftTimes(state.settings);
+}
+
+function leaveTypeOptionsHtml(selected = 'annual_leave') {
+  return Object.entries(LEAVE_TYPES)
+    .map(([value, { label }]) => {
+      const sel = value === selected ? ' selected' : '';
+      return `<option value="${value}"${sel}>${label}</option>`;
+    })
+    .join('');
+}
+
+function leaveDurationOptionsHtml(selected = 'full') {
+  return Object.entries(LEAVE_DURATIONS)
+    .map(([value, { label }]) => {
+      const sel = value === selected ? ' selected' : '';
+      return `<option value="${value}"${sel}>${label}</option>`;
+    })
+    .join('');
+}
+
+function leaveStatsHtml(leaveType, leaveDuration) {
+  const hours = leaveCreditHours(leaveType, leaveDuration);
+  const label = leaveTypeLabel(leaveType);
+  if (hours === 0) return `<span>${label}</span>`;
+  return `<span>${label} · ${leaveDurationLabel(leaveDuration)} · ${formatHours(hours)}h leave</span>`;
+}
+
+function syncLeaveDurationVisibility(row) {
+  const leaveType = row.querySelector('.day-leave-type')?.value ?? '';
+  const durEl = row.querySelector('.day-leave-duration');
+  if (!durEl) return;
+  const show = isPaidLeaveType(leaveType);
+  durEl.hidden = !show;
+  durEl.disabled = !show || state.locked;
+}
+
+function setRowMode(row, mode) {
+  const isLeave = mode === 'leave';
+  const workFields = row.querySelector('.day-work-fields');
+  const leaveFields = row.querySelector('.day-leave-fields');
+  if (workFields) workFields.hidden = isLeave;
+  if (leaveFields) leaveFields.hidden = !isLeave;
+  const modeSelect = row.querySelector('.day-mode');
+  if (modeSelect) modeSelect.value = mode;
+  syncLeaveDurationVisibility(row);
 }
 
 function statsHtml(workDate, start, end) {
@@ -247,17 +304,71 @@ function showRowError(row, msg) {
 }
 
 function updateRowStats(row) {
+  const mode = row.querySelector('.day-mode')?.value ?? 'work';
+  const stats = row.querySelector('.day-line-stats');
+  if (!stats) return;
+
+  if (mode === 'leave') {
+    const leaveType = row.querySelector('.day-leave-type')?.value ?? 'day_off';
+    const leaveDuration = row.querySelector('.day-leave-duration')?.value ?? 'full';
+    stats.innerHTML = leaveStatsHtml(
+      leaveType,
+      isPaidLeaveType(leaveType) ? leaveDuration : null,
+    );
+    const emptyHint = row.querySelector('.day-empty-hint');
+    if (emptyHint) emptyHint.hidden = true;
+    return;
+  }
+
   const workDate = row.dataset.date;
   const start = row.querySelector('.day-start')?.value ?? '';
   const end = row.querySelector('.day-end')?.value ?? '';
-  const stats = row.querySelector('.day-line-stats');
-  if (stats) stats.innerHTML = statsHtml(workDate, start, end);
+  stats.innerHTML = statsHtml(workDate, start, end);
   const emptyHint = row.querySelector('.day-empty-hint');
   if (emptyHint) emptyHint.hidden = Boolean(start && end);
 }
 
+async function saveLeaveEntry(row) {
+  if (state.locked) return;
+  showRowError(row, '');
+
+  const leaveType = row.querySelector('.day-leave-type')?.value;
+  if (!leaveType) return showRowError(row, 'Choose a leave type');
+
+  const leaveDuration = isPaidLeaveType(leaveType)
+    ? row.querySelector('.day-leave-duration')?.value
+    : null;
+  if (isPaidLeaveType(leaveType) && !leaveDuration) {
+    return showRowError(row, 'Choose full day, AM, or PM');
+  }
+
+  const payload = {
+    work_date: row.dataset.date,
+    user_id: state.user.id,
+    entry_type: 'leave',
+    leave_type: leaveType,
+    leave_duration: leaveDuration,
+    start_time: null,
+    end_time: null,
+  };
+
+  const id = row.dataset.entryId;
+  let result;
+  if (id) {
+    result = await client.from('time_entries').eq('id', id).update(payload);
+  } else {
+    result = await client.from('time_entries').insert({ ...payload, notes: null });
+  }
+
+  if (result.error) return showRowError(row, result.error.message);
+  await loadData();
+}
+
 async function saveDayEntry(row) {
   if (state.locked) return;
+  const mode = row.querySelector('.day-mode')?.value ?? 'work';
+  if (mode === 'leave') return saveLeaveEntry(row);
+
   showRowError(row, '');
 
   const workDate = row.dataset.date;
@@ -269,8 +380,11 @@ async function saveDayEntry(row) {
 
   const payload = {
     work_date: workDate,
+    entry_type: 'work',
     start_time: startTime,
     end_time: endTime,
+    leave_type: null,
+    leave_duration: null,
     user_id: state.user.id,
   };
 
@@ -310,18 +424,22 @@ function updateWeekUI() {
   els.totalWorked.textContent = formatHours(week.totalWorked);
   els.totalRegular.textContent = formatHours(week.totalRegular);
   els.totalOt.textContent = formatHours(week.totalOt);
+  if (els.totalLeave) els.totalLeave.textContent = formatHours(week.totalLeaveHours);
 
   const defaultStart = normalizeTime(state.settings?.default_start_time) || DEFAULT_START_TIME;
   const { end: shiftEnd } = defaultShiftTimes(state.settings);
   if (els.weekHoursHint) {
     els.weekHoursHint.textContent =
-      `Mon–Fri auto-fill: ${defaultStart}–${shiftEnd} (${formatHours(STANDARD_WEEK_HOURS)} h week). Edit any day and Save to keep your changes.`;
+      `Mon–Fri auto-fill: ${defaultStart}–${shiftEnd} (${formatHours(STANDARD_WEEK_HOURS)} h week). Use Work or Leave per row; paid leave credits 8h full / 4h AM or PM.`;
   }
 
   els.daysList.innerHTML = '';
   for (let i = 0; i < 7; i += 1) {
     const date = addDays(state.weekStart, i);
     const entry = state.entries.find((e) => normalizeDate(e.work_date) === date);
+    const mode = entry && entryTypeFor(entry) === 'leave' ? 'leave' : 'work';
+    const leaveType = entry?.leave_type ?? 'annual_leave';
+    const leaveDuration = entry?.leave_duration ?? 'full';
     const { start, end } = defaultTimesForDate(date);
     const row = document.createElement('div');
     row.className = `day-row${state.locked ? ' is-locked' : ''}`;
@@ -333,16 +451,38 @@ function updateWeekUI() {
     const deleteBtn = entry
       ? `<button type="button" class="ghost sm delete-day" ${disabled}>Delete</button>`
       : '';
+    const workHidden = mode === 'leave' ? ' hidden' : '';
+    const leaveHidden = mode === 'leave' ? '' : ' hidden';
+    const durationHidden =
+      mode === 'leave' && isPaidLeaveType(leaveType) ? '' : ' hidden';
 
     row.innerHTML = `
       <div class="day-line-primary">
         <span class="day-weekday">${formatWeekday(date)}</span>
-        <input type="time" class="day-start" step="900" value="${start}" ${disabled} required />
-        <span class="day-time-sep" aria-hidden="true">–</span>
-        <input type="time" class="day-end" step="900" value="${end}" ${disabled} required />
+        <select class="day-mode sm" ${disabled} aria-label="Work or leave">
+          <option value="work"${mode === 'work' ? ' selected' : ''}>Work</option>
+          <option value="leave"${mode === 'leave' ? ' selected' : ''}>Leave</option>
+        </select>
+        <div class="day-work-fields${workHidden}">
+          <input type="time" class="day-start" step="900" value="${start}" ${disabled} />
+          <span class="day-time-sep" aria-hidden="true">–</span>
+          <input type="time" class="day-end" step="900" value="${end}" ${disabled} />
+        </div>
+        <div class="day-leave-fields${leaveHidden}">
+          <select class="day-leave-type" ${disabled} aria-label="Leave type">
+            ${leaveTypeOptionsHtml(leaveType)}
+          </select>
+          <select class="day-leave-duration${durationHidden}" ${disabled} aria-label="Leave duration">
+            ${leaveDurationOptionsHtml(leaveDuration)}
+          </select>
+        </div>
       </div>
       <div class="day-line-secondary">
-        <div class="day-line-stats">${statsHtml(date, start, end)}</div>
+        <div class="day-line-stats">${
+          mode === 'leave'
+            ? leaveStatsHtml(leaveType, isPaidLeaveType(leaveType) ? leaveDuration : null)
+            : statsHtml(date, start, end)
+        }</div>
         <div class="day-row-actions">
           <button type="button" class="sm save-day" ${disabled}>Save</button>
           ${deleteBtn}
@@ -503,6 +643,26 @@ els.daysList.addEventListener('click', async (e) => {
     const btn = e.target.closest('.delete-day');
     if (btn.disabled) return;
     await deleteDayEntry(row);
+  }
+});
+
+els.daysList.addEventListener('change', (e) => {
+  if (state.locked) return;
+  const row = e.target.closest('.day-row');
+  if (!row) return;
+
+  if (e.target.classList.contains('day-mode')) {
+    setRowMode(row, e.target.value);
+    updateRowStats(row);
+    return;
+  }
+  if (e.target.classList.contains('day-leave-type')) {
+    syncLeaveDurationVisibility(row);
+    updateRowStats(row);
+    return;
+  }
+  if (e.target.classList.contains('day-leave-duration')) {
+    updateRowStats(row);
   }
 });
 
@@ -771,5 +931,5 @@ document.addEventListener('visibilitychange', () => {
 });
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js?v=21').catch(() => {});
+  navigator.serviceWorker.register('/sw.js?v=22').catch(() => {});
 }
