@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#06080c" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>Timesheet App</title>
-    <link rel="stylesheet" href="/styles.css?v=11" />
+    <link rel="stylesheet" href="/styles.css?v=13" />
     <script src="/config.js"></script>
   </head>
   <body class="shell">
@@ -40,6 +40,9 @@
           <input id="li-password" type="password" placeholder="Password" required autocomplete="current-password" />
           <button type="submit">Sign in</button>
         </form>
+        <script>
+          document.getElementById('login-form')?.addEventListener('submit', (e) => e.preventDefault());
+        </script>
 
         <div id="auth-error" class="error" hidden></div>
       </section>
@@ -76,7 +79,7 @@
 
         <section class="card">
           <h3>Daily entries</h3>
-          <p class="hint muted">Mon–Fri auto-fill work days. Switch a row to Leave for day off, non-paid leave, or paid leave (full 8h / AM or PM 4h).</p>
+          <p class="hint muted">Mon–Fri default to Work; Sat–Sun default to Day off. Use Leave for non-paid or paid leave (full 8h / AM or PM 4h).</p>
           <div id="days-list" class="days-list"></div>
         </section>
 
@@ -117,6 +120,14 @@
       </section>
     </main>
 
-    <script type="module" src="/app.js?v=23"></script>
+    <script type="module">
+      import('/app.js?v=28').catch(() => {
+        const err = document.getElementById('auth-error');
+        if (err) {
+          err.textContent = 'App failed to load — tap ↻ Refresh at the top of the page.';
+          err.hidden = false;
+        }
+      });
+    </script>
   </body>
 </html>

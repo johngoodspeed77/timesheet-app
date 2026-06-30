@@ -11,6 +11,9 @@ import {
   formatHours,
   isPaidLeaveType,
   isWeekend,
+  defaultRowModeForDate,
+  rowModeForEntry,
+  leaveTypesForSelect,
   leaveCreditHours,
   leaveDurationLabel,
   leaveTypeLabel,
@@ -108,5 +111,32 @@ describe('isWeekend', () => {
     assert.equal(isWeekend('2026-06-27'), true);
     assert.equal(isWeekend('2026-06-28'), true);
     assert.equal(isWeekend('2026-06-23'), false);
+  });
+});
+
+describe('row mode defaults', () => {
+  it('weekdays default to work and weekends to day off', () => {
+    assert.equal(defaultRowModeForDate('2026-06-23'), 'work');
+    assert.equal(defaultRowModeForDate('2026-06-27'), 'day_off');
+    assert.equal(defaultRowModeForDate('2026-06-28'), 'day_off');
+  });
+
+  it('maps saved entries to the correct row mode', () => {
+    assert.equal(rowModeForEntry(null, '2026-06-23'), 'work');
+    assert.equal(rowModeForEntry(null, '2026-06-27'), 'day_off');
+    assert.equal(
+      rowModeForEntry({ entry_type: 'leave', leave_type: 'day_off' }, '2026-06-23'),
+      'day_off',
+    );
+    assert.equal(
+      rowModeForEntry({ entry_type: 'leave', leave_type: 'annual_leave' }, '2026-06-23'),
+      'leave',
+    );
+  });
+
+  it('omits day off from leave type select options', () => {
+    const keys = leaveTypesForSelect().map(([key]) => key);
+    assert.ok(!keys.includes('day_off'));
+    assert.ok(keys.includes('annual_leave'));
   });
 });

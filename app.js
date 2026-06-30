@@ -37,7 +37,9 @@ import {
   weekdayDatesInWeek,
   weekStartFor,
   isWeekend,
-} from '/hours.js';
+  rowModeForEntry,
+  leaveTypesForSelect,
+} from '/hours.js?v=28';
 
 function apiBase(configured) {
   const value = (configured ?? '').trim();
@@ -238,7 +240,7 @@ function defaultTimesForDate(workDate) {
 }
 
 function leaveTypeOptionsHtml(selected = 'annual_leave') {
-  return Object.entries(LEAVE_TYPES)
+  return leaveTypesForSelect()
     .map(([value, { label }]) => {
       const sel = value === selected ? ' selected' : '';
       return `<option value="${value}"${sel}>${label}</option>`;
@@ -272,11 +274,10 @@ function syncLeaveDurationVisibility(row) {
 }
 
 function setRowMode(row, mode) {
-  const isLeave = mode === 'leave';
   const workFields = row.querySelector('.day-work-fields');
   const leaveFields = row.querySelector('.day-leave-fields');
-  if (workFields) workFields.hidden = isLeave;
-  if (leaveFields) leaveFields.hidden = !isLeave;
+  if (workFields) workFields.hidden = mode !== 'work';
+  if (leaveFields) leaveFields.hidden = mode !== 'leave';
   const modeSelect = row.querySelector('.day-mode');
   if (modeSelect) modeSelect.value = mode;
   syncLeaveDurationVisibility(row);
@@ -288,15 +289,16 @@ function statsHtml(workDate, start, end) {
   }
   const day = calcDay(workDate, start, end);
   const gross = parseTimeToHours(end) - parseTimeToHours(start);
-  const otPart =
-    day.dailyOt > 0 ? `<span class="muted">· OT ${formatHours(day.dailyOt)}</span>` : '';
+  const hoursPart =
+    day.dailyOt > 0
+      ? `<span>${formatHours(day.regular)}h + ${formatHours(day.dailyOt)}h OT</span>`
+      : `<span>${formatHours(day.worked)}h</span>`;
   const lunchHint =
     gross > day.worked
       ? `<span class="muted day-lunch-hint">${formatHours(gross)}h − ${formatHours(LUNCH_HOURS)} lunch</span>`
       : '';
   return `
-    <span>${formatHours(day.worked)}h</span>
-    ${otPart}
+    ${hoursPart}
     ${lunchHint}
   `;
 }
@@ -312,8 +314,15 @@ function updateRowStats(row) {
   const stats = row.querySelector('.day-line-stats');
   if (!stats) return;
 
+  if (mode === 'day_off') {
+    stats.innerHTML = '<span>Day off</span>';
+    const emptyHint = row.querySelector('.day-empty-hint');
+    if (emptyHint) emptyHint.hidden = true;
+    return;
+  }
+
   if (mode === 'leave') {
-    const leaveType = row.querySelector('.day-leave-type')?.value ?? 'day_off';
+    const leaveType = row.querySelector('.day-leave-type')?.value ?? 'annual_leave';
     const leaveDuration = row.querySelector('.day-leave-duration')?.value ?? 'full';
     stats.innerHTML = leaveStatsHtml(
       leaveType,
@@ -330,6 +339,32 @@ function updateRowStats(row) {
   stats.innerHTML = statsHtml(workDate, start, end);
   const emptyHint = row.querySelector('.day-empty-hint');
   if (emptyHint) emptyHint.hidden = Boolean(start && end);
+}
+
+async function saveDayOffEntry(row) {
+  if (state.locked) return;
+  showRowError(row, '');
+
+  const payload = {
+    work_date: row.dataset.date,
+    user_id: state.user.id,
+    entry_type: 'leave',
+    leave_type: 'day_off',
+    leave_duration: null,
+    start_time: null,
+    end_time: null,
+  };
+
+  const id = row.dataset.entryId;
+  let result;
+  if (id) {
+    result = await client.from('time_entries').eq('id', id).update(payload);
+  } else {
+    result = await client.from('time_entries').insert({ ...payload, notes: null });
+  }
+
+  if (result.error) return showRowError(row, result.error.message);
+  await loadData();
 }
 
 async function saveLeaveEntry(row) {
@@ -371,6 +406,7 @@ async function saveLeaveEntry(row) {
 async function saveDayEntry(row) {
   if (state.locked) return;
   const mode = row.querySelector('.day-mode')?.value ?? 'work';
+  if (mode === 'day_off') return saveDayOffEntry(row);
   if (mode === 'leave') return saveLeaveEntry(row);
 
   showRowError(row, '');
@@ -434,15 +470,18 @@ function updateWeekUI() {
   const { end: shiftEnd } = defaultShiftTimes(state.settings);
   if (els.weekHoursHint) {
     els.weekHoursHint.textContent =
-      `Mon–Fri auto-fill: ${defaultStart}–${shiftEnd} (${formatHours(STANDARD_WEEK_HOURS)} h week). Use Work or Leave per row; paid leave credits 8h full / 4h AM or PM.`;
+      `Mon–Fri default to Work (${defaultStart}–${shiftEnd}, ${formatHours(STANDARD_WEEK_HOURS)} h week). Sat–Sun default to Day off. Leave covers paid and non-paid types (8h full / 4h AM or PM).`;
   }
 
   els.daysList.innerHTML = '';
   for (let i = 0; i < 7; i += 1) {
     const date = addDays(state.weekStart, i);
     const entry = state.entries.find((e) => normalizeDate(e.work_date) === date);
-    const mode = entry && entryTypeFor(entry) === 'leave' ? 'leave' : 'work';
-    const leaveType = entry?.leave_type ?? 'annual_leave';
+    const mode = rowModeForEntry(entry, date);
+    const leaveType =
+      entry?.leave_type && entry.leave_type !== 'day_off'
+        ? entry.leave_type
+        : 'annual_leave';
     const leaveDuration = entry?.leave_duration ?? 'full';
     const { start, end } = defaultTimesForDate(date);
     const row = document.createElement('div');
@@ -455,47 +494,52 @@ function updateWeekUI() {
     const deleteBtn = entry
       ? `<button type="button" class="ghost sm delete-day" ${disabled}>Delete</button>`
       : '';
-    const workHidden = mode === 'leave' ? ' hidden' : '';
-    const leaveHidden = mode === 'leave' ? '' : ' hidden';
-    const durationHidden =
+    const workHiddenAttr = mode === 'work' ? '' : ' hidden';
+    const leaveHiddenAttr = mode === 'leave' ? '' : ' hidden';
+    const durationHiddenAttr =
       mode === 'leave' && isPaidLeaveType(leaveType) ? '' : ' hidden';
 
     row.innerHTML = `
       <div class="day-line-primary">
         <span class="day-weekday">${formatWeekday(date)}</span>
-        <select class="day-mode sm" ${disabled} aria-label="Work or leave">
+        <select class="day-mode sm" ${disabled} aria-label="Work, day off, or leave">
           <option value="work"${mode === 'work' ? ' selected' : ''}>Work</option>
+          <option value="day_off"${mode === 'day_off' ? ' selected' : ''}>Day off</option>
           <option value="leave"${mode === 'leave' ? ' selected' : ''}>Leave</option>
         </select>
-        <div class="day-work-fields${workHidden}">
+        <div class="day-work-fields"${workHiddenAttr}>
           <input type="time" class="day-start" step="900" value="${start}" ${disabled} />
           <span class="day-time-sep" aria-hidden="true">–</span>
           <input type="time" class="day-end" step="900" value="${end}" ${disabled} />
         </div>
-        <div class="day-leave-fields${leaveHidden}">
+        <div class="day-leave-fields"${leaveHiddenAttr}>
           <select class="day-leave-type" ${disabled} aria-label="Leave type">
             ${leaveTypeOptionsHtml(leaveType)}
           </select>
-          <select class="day-leave-duration${durationHidden}" ${disabled} aria-label="Leave duration">
+          <select class="day-leave-duration"${durationHiddenAttr} ${disabled} aria-label="Leave duration">
             ${leaveDurationOptionsHtml(leaveDuration)}
           </select>
         </div>
       </div>
       <div class="day-line-secondary">
         <div class="day-line-stats">${
-          mode === 'leave'
-            ? leaveStatsHtml(leaveType, isPaidLeaveType(leaveType) ? leaveDuration : null)
-            : statsHtml(date, start, end)
+          mode === 'day_off'
+            ? '<span>Day off</span>'
+            : mode === 'leave'
+              ? leaveStatsHtml(leaveType, isPaidLeaveType(leaveType) ? leaveDuration : null)
+              : statsHtml(date, start, end)
         }</div>
         <div class="day-row-actions">
           <button type="button" class="sm save-day" ${disabled}>Save</button>
           ${deleteBtn}
         </div>
       </div>
-      <span class="muted day-empty-hint"${entry ? ' hidden' : ''}>No entry yet</span>
+      <span class="muted day-empty-hint"${entry || mode === 'day_off' ? ' hidden' : ''}>No entry yet</span>
       <div class="day-row-error error" hidden></div>
     `;
     els.daysList.appendChild(row);
+    setRowMode(row, mode);
+    updateRowStats(row);
   }
 }
 
@@ -551,12 +595,12 @@ async function enterApp(freshSession = null) {
     user = freshSession.user ?? null;
   } else {
     const restored = await restoreAuthSession(AUTH_URL);
-    if (gen !== enterAppGeneration) return;
+    if (gen !== enterAppGeneration) return false;
     if (!restored) {
       clearSession();
       showAuthPanel();
       showMsg(els.authError, 'Session expired. Sign in again.');
-      return;
+      return false;
     }
     accessToken = restored.accessToken;
     user = restored.user;
@@ -566,18 +610,18 @@ async function enterApp(freshSession = null) {
     const meRes = await fetch(`${AUTH_URL}/auth/me`, {
       headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
     });
-    if (gen !== enterAppGeneration) return;
+    if (gen !== enterAppGeneration) return false;
     if (!meRes.ok) {
       clearSession();
       showAuthPanel();
       showMsg(els.authError, 'Signed in but could not verify your account. Try again.');
-      return;
+      return false;
     }
     const meBody = await meRes.json();
     user = meBody.user;
   }
 
-  if (gen !== enterAppGeneration) return;
+  if (gen !== enterAppGeneration) return false;
 
   client.setAccessToken(accessToken);
   state.user = user;
@@ -586,20 +630,21 @@ async function enterApp(freshSession = null) {
   try {
     await loadData();
   } catch (err) {
-    if (gen !== enterAppGeneration) return;
+    if (gen !== enterAppGeneration) return false;
     clearSession();
     showAuthPanel();
     showMsg(els.authError, err.message ?? 'Signed in but could not load your timesheet.');
-    return;
+    return false;
   }
 
-  if (gen !== enterAppGeneration) return;
+  if (gen !== enterAppGeneration) return false;
 
   showAppPanel();
   maybeShowLocalWeeklyReminder(
     Boolean(state.settings?.weekly_reminder_enabled),
     weekStartFor,
   );
+  return true;
 }
 
 if (els.hardRefreshBtn) {
@@ -691,12 +736,16 @@ els.daysList.addEventListener('input', (e) => {
   }
 });
 
-document.getElementById('login-form').addEventListener('submit', async (e) => {
+const loginForm = document.getElementById('login-form');
+const loginSubmitBtn = loginForm?.querySelector('button[type="submit"]');
+
+loginForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
+  enterAppGeneration += 1;
   showMsg(els.authError, '');
   const email = document.getElementById('li-email').value.trim();
   const password = document.getElementById('li-password').value;
-  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const submitBtn = loginSubmitBtn;
   const btnLabel = submitBtn?.textContent ?? 'Sign in';
 
   if (submitBtn) {
@@ -726,7 +775,13 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     if (!body.access_token) {
       return showMsg(els.authError, 'Sign in failed — no session received from server');
     }
-    await enterApp(body);
+    const entered = await enterApp(body);
+    if (!entered) {
+      showMsg(
+        els.authError,
+        'Sign in was interrupted — please try again. Use ↻ Refresh if this keeps happening.',
+      );
+    }
   } catch (err) {
     showMsg(els.authError, err.message ?? 'Sign in failed — check your connection');
   } finally {
@@ -939,5 +994,5 @@ document.addEventListener('visibilitychange', () => {
 });
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js?v=23').catch(() => {});
+  navigator.serviceWorker.register('/sw.js?v=29').catch(() => {});
 }

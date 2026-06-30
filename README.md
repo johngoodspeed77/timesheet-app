@@ -1,6 +1,6 @@
 # Timesheet App
 
-Weekly timesheet PWA — log start/finish times Mon–Sun, track overtime, and email your boss at week end. Built on [SupaDupaBase](https://github.com/johngoodspeed77/supadupabase).
+Weekly timesheet PWA — log start/finish times Mon–Sun, track overtime and leave, and email your boss at week end. Built on [SupaDupaBase](https://github.com/johngoodspeed77/supadupabase).
 
 **Repository:** https://github.com/johngoodspeed77/timesheet-app
 
@@ -8,19 +8,25 @@ Weekly timesheet PWA — log start/finish times Mon–Sun, track overtime, and e
 
 ## Status
 
-**Save point `v0.2.0-production`** (2026-06-29) — **production live.** Invite-only sign-in, inline day editing, persistent login, week submit.
+**Save point `v0.3.0-production`** (2026-06-30) — **production live.** Invite-only sign-in, work/day-off/leave rows, mobile layout, persistent login, week submit.
 
 | Done | Follow-up |
 |------|-----------|
 | PWA + tunnel `timesheet.whitelynx.co.nz` | Data API date-range filters |
 | Option B (`SDB_PROXY=0`, cross-origin API) | Google OAuth (optional; UI removed) |
 | Invite-only auth + admin invite links | Integration tests |
-| Inline Mon–Sun row editing + quarter-hour times | License |
-| Login race fix + **↻ Refresh** cache button | |
+| **Work / Day off / Leave** per day row | License |
+| Paid & non-paid leave types (8h full / 4h AM·PM) | |
+| Weekend rows default **Day off**; blank times until entered | |
+| Sign-in race + stale `hours.js` cache fixes | |
+| **Mobile-responsive** layout (375px / 320px tested) | |
+| **↻ Refresh** cache button on sign-in | |
 
 Details: [SAVEPOINT.md](./SAVEPOINT.md) · Handoff: [AGENT_HANDOFF.md](./AGENT_HANDOFF.md) · Stack: [SupaDupaBase STACK.md](../Cursor/supadupabase/docs/STACK.md)
 
 **Cursor workspace:** `E:\White Lynx Projects\Cursor\whitelynx.code-workspace`
+
+**Cache (production):** `app.js?v=28` · `hours.js?v=28` · `styles.css?v=13` · SW `timesheet-app-v29`
 
 ## Quick start (local)
 
@@ -35,7 +41,7 @@ npm run migrate
 npm run dev            # auth :3001, data :3002, mail :3004
 ```
 
-Apply timesheet migrations through `008_user_management.sql` in the SupaDupaBase repo.
+Apply timesheet migrations through `009_leave_entries.sql` in the SupaDupaBase repo.
 
 ### 2. Start Timesheet App
 
@@ -50,7 +56,7 @@ Open http://localhost:5180 — create a user via SupaDupaBase admin invite (prod
 ### Tests
 
 ```bash
-npm test               # hours.js overtime / lunch math
+npm test               # hours.js overtime, leave credits, row-mode defaults
 ```
 
 ## Deploy on VM101
@@ -70,20 +76,22 @@ On VM101 the PWA is static-only; API calls go to VM106. `config.js` is generated
 | Feature | Description |
 |---------|-------------|
 | Auth | Invite-only email/password via SupaDupaBase (`INVITE_ONLY=1` on VM106) |
-| Daily entry | Inline start/finish per day row; 30 min lunch deducted |
-| Auto-fill | Mon–Fri pre-filled from default start (8:00 → 16:30 clock, 8 h worked) |
-| Overtime | >8 h/day OT; Sat 1.5×, Sun 2×; OT stacks on day rate |
-| Week view | Mon–Sun navigation with running totals |
+| Daily entry | **Work** (start/finish), **Day off**, or **Leave** per row; 30 min lunch deducted on work days |
+| Defaults | Mon–Fri → Work (8:00–16:30 clock, 8 h worked); Sat–Sun → Day off |
+| Leave | Non-paid leave; paid types (annual, sick, medical, bereavement) with full / AM / PM |
+| Overtime | >8 h/day OT; Sat 1.5×, Sun 2×; row shows **8.00h + X.XXh OT** when OT applies |
+| Week view | Mon–Sun navigation with worked / regular / OT / leave totals |
 | Settings | Boss email, display name, default start time, weekly reminder toggle |
-| Submit | Emails fixed HTML template; locks the week |
+| Submit | Emails boss HTML timesheet; locks the week |
 | Reminders | Optional Sunday 3:00 PM NZ push (VAPID + cron on VM106) |
 | Refresh | **↻ Refresh** on sign-in — clears SW cache when app feels stuck |
+| Mobile | Full-width buttons, stacked day rows, no horizontal scroll on narrow phones |
 
 ## Backend dependency
 
 Timesheet App requires SupaDupaBase with:
 
-- Migrations through `008_user_management.sql`
+- Migrations through `009_leave_entries.sql` (`entry_type`, `leave_type`, `leave_duration`)
 - Tables whitelisted in data-api: `user_settings`, `time_entries`, `week_submissions`, `push_subscriptions`
 - `mail-service` running with SMTP configured
 - `INVITE_ONLY=1` in production `.env` (wired through `docker-compose.yml`)
@@ -100,10 +108,11 @@ Timesheet App requires SupaDupaBase with:
 
 ## Troubleshooting
 
-- **Sign-in does nothing / old UI:** Tap **↻ Refresh** on the sign-in page (top-right). Clears service worker caches and reloads.
+- **Sign-in greyed out / does nothing:** Tap **↻ Refresh** on the sign-in page. Often a stale service-worker `hours.js` vs `app.js` mismatch.
 - **Invalid password:** Production is invite-only — use the account your admin invited.
 - **Submit fails:** Check SupaDupaBase `SMTP_*` env vars and boss email in Settings.
 - **Reminders:** Enable in Settings, allow notifications, install PWA; VM106 needs VAPID keys and Sunday cron.
+- **Layout looks wrong on phone:** Hard refresh after deploy; cache is `styles.css?v=13` / SW v29.
 
 ## License
 

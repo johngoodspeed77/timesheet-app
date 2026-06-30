@@ -120,6 +120,24 @@ export function isWeekend(workDate) {
   return dow === 0 || dow === 6;
 }
 
+/** Default row mode when there is no saved entry for this date. */
+export function defaultRowModeForDate(workDate) {
+  return isWeekend(workDate) ? 'day_off' : 'work';
+}
+
+/** Map a saved entry (or lack of one) to the Work / Day off / Leave dropdown. */
+export function rowModeForEntry(entry, workDate) {
+  if (!entry) return defaultRowModeForDate(workDate);
+  if (entryTypeFor(entry) === 'work') return 'work';
+  if (entry.leave_type === 'day_off') return 'day_off';
+  return 'leave';
+}
+
+/** Leave types shown when the row mode is Leave (day off has its own mode). */
+export function leaveTypesForSelect() {
+  return Object.entries(LEAVE_TYPES).filter(([key]) => key !== 'day_off');
+}
+
 export function dayRate(workDate) {
   const d = new Date(`${workDate}T12:00:00`);
   const dow = d.getDay();

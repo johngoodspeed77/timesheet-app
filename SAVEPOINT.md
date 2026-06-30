@@ -1,13 +1,13 @@
-# Save point — v0.2.0-production
+# Save point — v0.3.0-production
 
-**Date:** 2026-06-29  
-**Git tag:** `v0.2.0-production`  
+**Date:** 2026-06-30  
+**Git tag:** `v0.3.0-production` (create after commit + push)  
 **Repository:** https://github.com/johngoodspeed77/timesheet-app  
 **Branch:** `main`
 
 ## Milestone summary
 
-**Production PWA is live** on VM101 at https://timesheet.whitelynx.co.nz, backed by SupaDupaBase on VM106 (Option B). Invite-only sign-in, inline day editing, persistent login, and week submit are working. Service worker **v20**.
+**Production PWA live** on VM101 at https://timesheet.whitelynx.co.nz, backed by SupaDupaBase on VM106 (Option B). Work/day-off/leave rows, mobile layout, sign-in reliability fixes, invite-only auth, week submit. Service worker **v29**.
 
 ## Production (live)
 
@@ -17,7 +17,7 @@
 | VM | `johngoodspeed@192.168.1.19` (VM101) |
 | Deploy path | `/opt/timesheet-app` |
 | Backend | https://supadupabase.whitelynx.co.nz (VM106) |
-| Auth mode | **Invite-only** — no public sign-up; admin invites via SupaDupaBase |
+| Auth mode | **Invite-only** — admin invites via SupaDupaBase |
 
 **Redeploy after code changes on VM101:**
 
@@ -29,71 +29,45 @@ DOCKER_BUILDKIT=0 docker compose -f infra/docker-compose.yml --env-file infra/.e
 
 ## What works
 
-- Email/password sign-in (invited users only)
-- Admin invite acceptance (`?invite_token=…`)
-- Persistent login (`lib/session.js` — localStorage + refresh)
-- Mon–Fri auto-fill from default start (8:00 → 16:30 clock, 8 h worked after lunch)
-- Inline per-day editing (start/finish, Save/Delete on each row)
-- 15-minute quarter-hour time steps (iOS-friendly)
-- Week navigation, totals, overtime display with lunch breakdown
-- Settings: boss email, display name, default start, weekly reminder toggle
-- Submit week → email boss + lock week (unlock available)
-- **↻ Refresh** button on sign-in header — clears SW cache and reloads
+- Invite-only sign-in + persistent session (`lib/session.js`)
+- **Work / Day off / Leave** per day; leave types (paid + non-paid)
+- Mon–Fri auto-fill; Sat–Sun default Day off; weekend times blank until entered
+- OT shown as `8.00h + X.XXh OT`; lunch breakdown subtext
+- Mobile layout (Send button, day rows, settings) at 375px / 320px
+- Submit week → email + lock; unlock available
+- **↻ Refresh** on sign-in; `hours.js` cache-busted with `app.js`
 - Hours regression tests (`npm test`)
-
-## Key commits (v0.1.0 → this save point)
-
-| Commit | Summary |
-|--------|---------|
-| `130f3c2` | Option B — PWA on VM101, API on VM106 |
-| `d6f1be4` | Admin invite link acceptance |
-| `37e8be0` | Inline day row editing |
-| `b6dffc2` | Invite-only UI; null-safe messages |
-| `2af6ebd` | Fix sign-in race (stale session restore) |
-| `7c302a9` | Hard refresh button on sign-in |
 
 ## Cache versions (this save point)
 
 | Asset | Version |
 |-------|---------|
-| `app.js` | `?v=20` |
-| `sw.js` | `?v=20` (`timesheet-app-v20`) |
-| `styles.css` | `?v=8` |
+| `app.js` | `?v=28` |
+| `hours.js` | `?v=28` |
+| `sw.js` | `?v=29` (`timesheet-app-v29`) |
+| `styles.css` | `?v=13` |
 
-## Environment (VM101 `infra/.env`)
+## Key changes (v0.2.0 → v0.3.0)
 
-| Variable | Purpose |
-|----------|---------|
-| `SDB_PUBLIC_URL` | `https://supadupabase.whitelynx.co.nz` |
-| `SDB_PROXY` | `0` — browser calls VM106 directly |
-| `VAPID_PUBLIC_KEY` | Web Push subscribe (from VM106) |
+| Area | Summary |
+|------|---------|
+| Leave | Migration 009; leave UI; day off as row mode |
+| Sign-in | Race fix, token snapshot, module cache bust |
+| UI | Hide time picker icon; OT display; mobile CSS pass |
+| Totals | Removed paid equivalent |
 
 ## Troubleshooting
 
-- **Sign-in appears dead:** Tap **↻ Refresh** on the sign-in page (clears service worker + caches).
-- **Stale app after deploy:** Hard refresh or re-open PWA; SW uses network-first for JS/HTML.
-- **Submit fails:** Check boss email in Settings and SMTP on VM106.
-
-## Restore / run locally
-
-```bash
-git clone https://github.com/johngoodspeed77/timesheet-app.git
-cd timesheet-app
-git checkout v0.2.0-production
-npm install
-# Start SupaDupaBase locally first (see supadupabase README)
-npm run dev
-```
-
-Open http://localhost:5180
+- **Sign-in greyed out:** ↻ Refresh — stale SW `hours.js` vs `app.js`.
+- **Stale UI after deploy:** Hard refresh; SW network-first for HTML/JS.
+- **Submit fails:** Boss email in Settings + SMTP on VM106.
 
 ## Not done / follow-up
 
-- Google OAuth button removed from UI (invite-only); re-enable only if needed
-- Data API date-range filters (client loads all user entries)
-- Integration tests for submit flow and RLS
+- Data API date-range filters
+- Integration tests
 - License
 
 ## Last updated
 
-2026-06-29
+2026-06-30
