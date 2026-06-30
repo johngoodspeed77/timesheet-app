@@ -36,6 +36,7 @@ import {
   toApiTime,
   weekdayDatesInWeek,
   weekStartFor,
+  isWeekend,
 } from '/hours.js';
 
 function apiBase(configured) {
@@ -229,6 +230,9 @@ function defaultTimesForDate(workDate) {
       start: normalizeTime(entry.start_time),
       end: normalizeTime(entry.end_time),
     };
+  }
+  if (isWeekend(workDate)) {
+    return { start: '', end: '' };
   }
   return defaultShiftTimes(state.settings);
 }
@@ -672,7 +676,11 @@ els.daysList.addEventListener('input', (e) => {
   if (!row) return;
 
   if (e.target.classList.contains('day-start')) {
-    if (row.dataset.hasEntry !== '1' && row.dataset.finishEdited !== '1') {
+    if (
+      row.dataset.hasEntry !== '1' &&
+      row.dataset.finishEdited !== '1' &&
+      !isWeekend(row.dataset.date)
+    ) {
       const endInput = row.querySelector('.day-end');
       if (endInput) endInput.value = defaultFinishTime(e.target.value);
     }
@@ -931,5 +939,5 @@ document.addEventListener('visibilitychange', () => {
 });
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js?v=22').catch(() => {});
+  navigator.serviceWorker.register('/sw.js?v=23').catch(() => {});
 }

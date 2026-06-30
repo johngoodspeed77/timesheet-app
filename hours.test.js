@@ -10,6 +10,7 @@ import {
   defaultFinishTime,
   formatHours,
   isPaidLeaveType,
+  isWeekend,
   leaveCreditHours,
   leaveDurationLabel,
   leaveTypeLabel,
@@ -99,5 +100,13 @@ describe('calcWeek', () => {
 describe('defaultFinishTime', () => {
   it('08:00 start → 16:30 finish on clock', () => {
     assert.equal(defaultFinishTime('08:00'), '16:30');
+  });
+});
+
+describe('isWeekend', () => {
+  it('Saturday and Sunday are weekends', () => {
+    assert.equal(isWeekend('2026-06-27'), true);
+    assert.equal(isWeekend('2026-06-28'), true);
+    assert.equal(isWeekend('2026-06-23'), false);
   });
 });

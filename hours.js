@@ -115,6 +115,11 @@ export function formatHours(n) {
   return n.toFixed(2);
 }
 
+export function isWeekend(workDate) {
+  const dow = new Date(`${normalizeDate(workDate)}T12:00:00`).getDay();
+  return dow === 0 || dow === 6;
+}
+
 export function dayRate(workDate) {
   const d = new Date(`${workDate}T12:00:00`);
   const dow = d.getDay();
