@@ -5,10 +5,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-if [[ "${DOCKER_SUDO:-}" == "1" ]] || { [[ "$(id -u)" -ne 0 ]] && ! groups | grep -q '\bdocker\b'; }; then
+if [[ "${DOCKER_SUDO:-}" == "1" ]]; then
   COMPOSE="sudo docker compose -f infra/docker-compose.yml --env-file infra/.env"
-else
+elif [[ -w /var/run/docker.sock ]] || [[ "$(id -u)" -eq 0 ]]; then
   COMPOSE="docker compose -f infra/docker-compose.yml --env-file infra/.env"
+elif groups 2>/dev/null | grep -q '\bdocker\b'; then
+  COMPOSE="docker compose -f infra/docker-compose.yml --env-file infra/.env"
+else
+  COMPOSE="sudo docker compose -f infra/docker-compose.yml --env-file infra/.env"
 fi
 
 export DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-0}"
