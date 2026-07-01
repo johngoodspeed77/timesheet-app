@@ -22,6 +22,7 @@ services:
       context: ..
       dockerfile: infra/Dockerfile.deploy-hook
     restart: unless-stopped
+    user: "1000:124"
     ports:
       - "${DEPLOY_HOOK_PORT:-5189}:5189"
     environment:
