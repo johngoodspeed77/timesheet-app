@@ -66,14 +66,6 @@ docker compose -f infra/docker-compose.yml --env-file .env --profile migrate run
 
 Ensure SMTP and VAPID are set for week submit and push reminders.
 
-## 3. Google OAuth (optional)
-
-Google Cloud Console → redirect URI:
-
-`https://supadupabase.whitelynx.co.nz/auth/callback/google`
-
-Timesheet “Sign in with Google” uses `redirect_to=https://timesheet.whitelynx.co.nz`.
-
 ## Local dev (both repos)
 
 Open **`whitelynx.code-workspace`** in Cursor (`E:\White Lynx Projects\Cursor\whitelynx.code-workspace`).

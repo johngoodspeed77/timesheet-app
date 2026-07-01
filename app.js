@@ -970,13 +970,6 @@ if (els.inviteForm) {
 
 if (inviteToken) {
   loadInvitePanel(inviteToken);
-} else if (params.get('access_token')) {
-  const oauthSession = {
-    access_token: params.get('access_token'),
-    refresh_token: params.get('refresh_token'),
-  };
-  window.history.replaceState({}, '', window.location.pathname);
-  enterApp(oauthSession);
 } else if (initialTokens.accessToken || initialTokens.refreshToken) {
   enterApp().catch((err) => {
     clearSession();

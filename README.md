@@ -13,7 +13,7 @@ Weekly timesheet PWA — log start/finish times Mon–Sun, track overtime and le
 | Done | Follow-up |
 |------|-----------|
 | PWA + tunnel `timesheet.whitelynx.co.nz` | Data API date-range filters |
-| Option B (`SDB_PROXY=0`, cross-origin API) | Google OAuth (optional; UI removed) |
+| Option B (`SDB_PROXY=0`, cross-origin API) | Integration tests |
 | Invite-only auth + admin invite links | Integration tests |
 | **Work / Day off / Leave** per day row | License |
 | Paid & non-paid leave types (8h full / 4h AM·PM) | |

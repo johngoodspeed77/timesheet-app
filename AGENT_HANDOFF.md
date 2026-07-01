@@ -49,7 +49,6 @@ Browser loads PWA from VM101; auth/data/mail call VM106 directly (`SDB_PROXY=0`)
 ### Not done / follow-up
 
 - [ ] **Data API date-range filters** — client loads all user entries
-- [ ] **Google OAuth** — optional; removed from UI while invite-only
 - [ ] Integration tests (RLS lock, submit flow)
 - [ ] License
 
