@@ -8,7 +8,7 @@ Weekly timesheet PWA — log start/finish times Mon–Sun, track overtime and le
 
 ## Status
 
-**Save point `v0.3.2-development`** (2026-06-27) — **production live** at last deploy `v0.3.1-production`. **`main` on GitHub** has dirty Save UI + remote deploy — **pending VM101 deploy**.
+**Save point `v0.3.2-development`** (2026-07-01) — **`main` at `b5168b9` on GitHub.** Production still on `v0.3.1-production` (`app.js?v=28`) until home deploy.
 
 | Done (on GitHub `main`) | Follow-up |
 |---------------------------|-----------|

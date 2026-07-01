@@ -12,10 +12,12 @@
 **Backend repo:** `johngoodspeed77/supadupabase`  
 **GitHub (this repo):** `johngoodspeed77/timesheet-app`
 
-## Current stage — v0.3.2-development (2026-06-27)
+## Current stage — v0.3.2-development (2026-07-01)
 
-**Timesheet (VM101):** https://timesheet.whitelynx.co.nz · last deployed `v0.3.1-production` · **`main` pending deploy**  
-**SupaDupaBase (VM106):** https://supadupabase.whitelynx.co.nz · `v0.3.0-development` on GitHub (`2ee9aae`)
+**Timesheet (VM101):** https://timesheet.whitelynx.co.nz · last deployed `v0.3.1-production` · **`main` at `b5168b9` pending deploy**  
+**SupaDupaBase (VM106):** https://supadupabase.whitelynx.co.nz · **`main` at `7421989` pending deploy**
+
+**Next:** [HOME_PC_SETUP Quick checklist](https://github.com/johngoodspeed77/supadupabase/blob/main/infra/HOME_PC_SETUP.md#quick-checklist--run-when-you-get-home)
 
 Browser loads PWA from VM101; auth/data/mail call VM106 (`SDB_PROXY=0`).  
 **Auth:** invite-only email/password (`INVITE_ONLY=1` on VM106).  
@@ -69,9 +71,9 @@ DOCKER_BUILDKIT=0 docker compose -f infra/docker-compose.yml --env-file infra/.e
 
 ## Next work
 
-1. Home PC deploy (section A in HOME_PC_SETUP.md)
-2. Remote hook setup (section B)
-3. Data API date filters
+1. **Owner home deploy** — [Quick checklist](https://github.com/johngoodspeed77/supadupabase/blob/main/infra/HOME_PC_SETUP.md#quick-checklist--run-when-you-get-home)
+2. Confirm dirty Save UI + `app.js?v=29` on production
+3. Data API date filters; integration tests; license
 
 ## Related docs
 
@@ -82,4 +84,4 @@ DOCKER_BUILDKIT=0 docker compose -f infra/docker-compose.yml --env-file infra/.e
 
 ## Last updated
 
-2026-07-01 — Remote deploy check: VM101 hook OK; PWA deploy pending.
+2026-07-01 — v0.3.2-development: all on GitHub (`b5168b9`); home deploy pending.
