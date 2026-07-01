@@ -1,5 +1,6 @@
 FROM node:22-alpine
-RUN apk add --no-cache docker-cli git bash
+RUN apk add --no-cache docker-cli git bash \
+  && git config --global --add safe.directory /repo
 WORKDIR /repo
 COPY infra/deploy-hook/server.mjs /app/server.mjs
 ENV NODE_ENV=production

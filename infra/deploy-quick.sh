@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-if [[ "${DOCKER_SUDO:-}" == "1" ]] || ! groups | grep -q '\bdocker\b'; then
+if [[ "${DOCKER_SUDO:-}" == "1" ]] || { [[ "$(id -u)" -ne 0 ]] && ! groups | grep -q '\bdocker\b'; }; then
   COMPOSE="sudo docker compose -f infra/docker-compose.yml --env-file infra/.env"
 else
   COMPOSE="docker compose -f infra/docker-compose.yml --env-file infra/.env"
