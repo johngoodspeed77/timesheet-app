@@ -66,6 +66,18 @@ docker compose -f infra/docker-compose.yml --env-file .env --profile migrate run
 
 Ensure SMTP and VAPID are set for week submit and push reminders.
 
+## Remote deploy (away from home)
+
+See [SupaDupaBase infra/REMOTE_DEPLOY.md](../../Cursor/supadupabase/infra/REMOTE_DEPLOY.md).
+
+One-time on VM101: set `DEPLOY_HOOK_SECRET` in `infra/.env`, start deploy-hook, route Cloudflare `/hooks/*` → port `5189`.
+
+```bash
+# from supadupabase repo on your dev PC:
+node scripts/remote-deploy.mjs --target timesheet
+node scripts/remote-deploy.mjs --target both
+```
+
 ## Local dev (both repos)
 
 Open **`whitelynx.code-workspace`** in Cursor (`E:\White Lynx Projects\Cursor\whitelynx.code-workspace`).
