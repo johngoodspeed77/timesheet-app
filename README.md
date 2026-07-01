@@ -24,7 +24,7 @@ Weekly timesheet PWA — log start/finish times Mon–Sun, track overtime and le
 | Boss email **From** employee + Fuzed Group title (SupaDupaBase mail) | |
 | Subject uses **Week ending** + Sunday date | |
 
-Details: [SAVEPOINT.md](./SAVEPOINT.md) · Handoff: [AGENT_HANDOFF.md](./AGENT_HANDOFF.md) · Stack: [SupaDupaBase STACK.md](../Cursor/supadupabase/docs/STACK.md)
+Details: [SAVEPOINT.md](./SAVEPOINT.md) · Handoff: [AGENT_HANDOFF.md](./AGENT_HANDOFF.md) · **Home deploy:** [SupaDupaBase HOME_PC_SETUP.md](../supadupabase/infra/HOME_PC_SETUP.md)
 
 **Cursor workspace:** `E:\White Lynx Projects\Cursor\whitelynx.code-workspace`
 
