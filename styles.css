@@ -333,11 +333,16 @@ input[type="time"] {
   flex-shrink: 0;
   gap: 0.35rem;
   align-items: center;
+  justify-content: flex-end;
+  min-width: 4.5rem;
 }
 .day-row-actions button {
   width: auto;
   margin: 0;
   white-space: nowrap;
+}
+.day-row-actions button[hidden] {
+  display: none;
 }
 .day-empty-hint { font-size: 0.8125rem; }
 .day-row.is-locked { opacity: 0.55; }
@@ -519,16 +524,17 @@ h1, h2, h3 { margin-top: 0; line-height: 1.25; }
     gap: 0.35rem;
     width: 100%;
     flex-shrink: 1;
+    justify-content: stretch;
+  }
+
+  .day-row-actions .save-day {
+    grid-column: 2;
   }
 
   .day-row-actions button {
     width: 100%;
     min-width: 0;
     margin: 0;
-  }
-
-  .day-row-actions button:only-child {
-    grid-column: 1 / -1;
   }
 }
 

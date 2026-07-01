@@ -309,6 +309,64 @@ function showRowError(row, msg) {
   showMsg(el, msg);
 }
 
+function rowValuesFromDom(row) {
+  const mode = row.querySelector('.day-mode')?.value ?? 'work';
+  if (mode === 'day_off') return { mode: 'day_off' };
+  if (mode === 'leave') {
+    const leaveType = row.querySelector('.day-leave-type')?.value ?? '';
+    const leaveDuration = row.querySelector('.day-leave-duration')?.value ?? 'full';
+    return {
+      mode: 'leave',
+      leaveType,
+      leaveDuration: isPaidLeaveType(leaveType) ? leaveDuration : null,
+    };
+  }
+  return {
+    mode: 'work',
+    start: row.querySelector('.day-start')?.value ?? '',
+    end: row.querySelector('.day-end')?.value ?? '',
+  };
+}
+
+function normalizeRowValues(values) {
+  if (values.mode === 'work') {
+    return {
+      mode: 'work',
+      start: normalizeTime(snapTimeToQuarterHour(values.start)) || values.start,
+      end: normalizeTime(snapTimeToQuarterHour(values.end)) || values.end,
+    };
+  }
+  if (values.mode === 'day_off') return { mode: 'day_off' };
+  return {
+    mode: 'leave',
+    leaveType: values.leaveType,
+    leaveDuration: values.leaveDuration,
+  };
+}
+
+function rowBaselineFromEntry(entry, date, mode, start, end, leaveType, leaveDuration) {
+  if (mode === 'day_off') return { mode: 'day_off' };
+  if (mode === 'leave') {
+    return {
+      mode: 'leave',
+      leaveType,
+      leaveDuration: isPaidLeaveType(leaveType) ? leaveDuration : null,
+    };
+  }
+  return { mode: 'work', start, end };
+}
+
+function updateRowDirtyState(row) {
+  const saveBtn = row.querySelector('.save-day');
+  if (!saveBtn) return;
+  const baseline = JSON.parse(row.dataset.baseline || '{}');
+  const dirty =
+    JSON.stringify(normalizeRowValues(rowValuesFromDom(row))) !==
+    JSON.stringify(normalizeRowValues(baseline));
+  saveBtn.hidden = !dirty;
+  saveBtn.disabled = state.locked;
+}
+
 function updateRowStats(row) {
   const mode = row.querySelector('.day-mode')?.value ?? 'work';
   const stats = row.querySelector('.day-line-stats');
@@ -440,16 +498,6 @@ async function saveDayEntry(row) {
   await loadData();
 }
 
-async function deleteDayEntry(row) {
-  const id = row.dataset.entryId;
-  if (!id || state.locked) return;
-  if (!confirm('Delete this day entry?')) return;
-  showRowError(row, '');
-  const { error } = await client.from('time_entries').eq('id', id).delete();
-  if (error) return showRowError(row, error.message);
-  await loadData();
-}
-
 function updateWeekUI() {
   const weekEnd = addDays(state.weekStart, 6);
   els.weekLabel.textContent = formatDateRangeNz(state.weekStart, weekEnd);
@@ -491,9 +539,6 @@ function updateWeekUI() {
     row.dataset.hasEntry = entry ? '1' : '0';
 
     const disabled = state.locked ? 'disabled' : '';
-    const deleteBtn = entry
-      ? `<button type="button" class="ghost sm delete-day" ${disabled}>Delete</button>`
-      : '';
     const workHiddenAttr = mode === 'work' ? '' : ' hidden';
     const leaveHiddenAttr = mode === 'leave' ? '' : ' hidden';
     const durationHiddenAttr =
@@ -530,16 +575,19 @@ function updateWeekUI() {
               : statsHtml(date, start, end)
         }</div>
         <div class="day-row-actions">
-          <button type="button" class="sm save-day" ${disabled}>Save</button>
-          ${deleteBtn}
+          <button type="button" class="sm save-day" hidden ${disabled}>Save</button>
         </div>
       </div>
       <span class="muted day-empty-hint"${entry || mode === 'day_off' ? ' hidden' : ''}>No entry yet</span>
       <div class="day-row-error error" hidden></div>
     `;
     els.daysList.appendChild(row);
+    row.dataset.baseline = JSON.stringify(
+      rowBaselineFromEntry(entry, date, mode, start, end, leaveType, leaveDuration),
+    );
     setRowMode(row, mode);
     updateRowStats(row);
+    updateRowDirtyState(row);
   }
 }
 
@@ -688,11 +736,6 @@ els.daysList.addEventListener('click', async (e) => {
     return;
   }
 
-  if (e.target.closest('.delete-day')) {
-    const btn = e.target.closest('.delete-day');
-    if (btn.disabled) return;
-    await deleteDayEntry(row);
-  }
 });
 
 els.daysList.addEventListener('change', (e) => {
@@ -703,15 +746,18 @@ els.daysList.addEventListener('change', (e) => {
   if (e.target.classList.contains('day-mode')) {
     setRowMode(row, e.target.value);
     updateRowStats(row);
+    updateRowDirtyState(row);
     return;
   }
   if (e.target.classList.contains('day-leave-type')) {
     syncLeaveDurationVisibility(row);
     updateRowStats(row);
+    updateRowDirtyState(row);
     return;
   }
   if (e.target.classList.contains('day-leave-duration')) {
     updateRowStats(row);
+    updateRowDirtyState(row);
   }
 });
 
@@ -730,9 +776,11 @@ els.daysList.addEventListener('input', (e) => {
       if (endInput) endInput.value = defaultFinishTime(e.target.value);
     }
     updateRowStats(row);
+    updateRowDirtyState(row);
   } else if (e.target.classList.contains('day-end')) {
     row.dataset.finishEdited = '1';
     updateRowStats(row);
+    updateRowDirtyState(row);
   }
 });
 
@@ -987,5 +1035,5 @@ document.addEventListener('visibilitychange', () => {
 });
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js?v=29').catch(() => {});
+  navigator.serviceWorker.register('/sw.js?v=30').catch(() => {});
 }

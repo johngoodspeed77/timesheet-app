@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#06080c" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>Timesheet App</title>
-    <link rel="stylesheet" href="/styles.css?v=13" />
+    <link rel="stylesheet" href="/styles.css?v=14" />
     <script src="/config.js"></script>
   </head>
   <body class="shell">
@@ -121,7 +121,7 @@
     </main>
 
     <script type="module">
-      import('/app.js?v=28').catch(() => {
+      import('/app.js?v=29').catch(() => {
         const err = document.getElementById('auth-error');
         if (err) {
           err.textContent = 'App failed to load — tap ↻ Refresh at the top of the page.';
