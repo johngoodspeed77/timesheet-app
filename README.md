@@ -17,7 +17,7 @@ Weekly timesheet PWA — log start/finish times Mon–Sun, track overtime and le
 | **Save only when day row is dirty** | Data API date-range filters |
 | Delete button removed | Integration tests, license |
 
-Details: [SAVEPOINT.md](./SAVEPOINT.md) · Handoff: [AGENT_HANDOFF.md](./AGENT_HANDOFF.md) · **Home deploy:** [SupaDupaBase HOME_PC_SETUP.md](https://github.com/johngoodspeed77/supadupabase/blob/main/infra/HOME_PC_SETUP.md)
+Details: [SAVEPOINT.md](./SAVEPOINT.md) · Handoff: [AGENT_HANDOFF.md](./AGENT_HANDOFF.md) · **Deploy at home:** [HOME_PC_SETUP.md](https://github.com/johngoodspeed77/supadupabase/blob/main/infra/HOME_PC_SETUP.md#quick-checklist--run-when-you-get-home)
 
 **Cache (this release):** `app.js?v=29` · `hours.js?v=28` · `styles.css?v=14` · SW `timesheet-app-v30`
 
