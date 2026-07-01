@@ -12,11 +12,10 @@ Weekly timesheet PWA — log start/finish times Mon–Sun, track overtime and le
 
 | Done (on GitHub `main`) | Follow-up |
 |---------------------------|-----------|
-| PWA + tunnel, invite-only auth | **Deploy to VM101** (home PC) |
-| Work / day off / leave rows | Remote deploy hook setup |
+| PWA + tunnel, invite-only auth | **Deploy to VM101** (hook works; PWA still v28) |
+| **Remote deploy hook on VM101** ✅ | Fix VM106 hook (502) |
 | **Save only when day row is dirty** | Data API date-range filters |
 | Delete button removed | Integration tests, license |
-| Remote deploy hook for VM101 | |
 
 Details: [SAVEPOINT.md](./SAVEPOINT.md) · Handoff: [AGENT_HANDOFF.md](./AGENT_HANDOFF.md) · **Home deploy:** [SupaDupaBase HOME_PC_SETUP.md](https://github.com/johngoodspeed77/supadupabase/blob/main/infra/HOME_PC_SETUP.md)
 

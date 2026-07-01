@@ -34,8 +34,8 @@ Browser loads PWA from VM101; auth/data/mail call VM106 (`SDB_PROXY=0`).
 
 ### Not done / follow-up
 
-- [ ] **Deploy `main` to VM101** — [HOME_PC_SETUP.md](https://github.com/johngoodspeed77/supadupabase/blob/main/infra/HOME_PC_SETUP.md)
-- [ ] Enable remote deploy hook + Cloudflare path rule
+- [ ] **Deploy `main` to VM101** — remote hook works; run with `DEPLOY_HOOK_SECRET`
+- [ ] Fix VM106 SupaDupaBase deploy-hook (502)
 - [ ] Data API date-range filters
 - [ ] Integration tests; license
 
@@ -82,4 +82,4 @@ DOCKER_BUILDKIT=0 docker compose -f infra/docker-compose.yml --env-file infra/.e
 
 ## Last updated
 
-2026-06-27 — v0.3.2-development: dirty Save UI + remote deploy hook (`4a8329d`, `018bb4d`).
+2026-07-01 — Remote deploy check: VM101 hook OK; PWA deploy pending.

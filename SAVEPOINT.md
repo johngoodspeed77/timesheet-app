@@ -1,7 +1,7 @@
 # Save point — v0.3.2-development
 
-**Date:** 2026-06-27  
-**Git commit:** `018bb4d` (main; UI in `4a8329d`)  
+**Date:** 2026-07-01  
+**Git commit:** `7dfd3f9` (main; UI in `4a8329d`)  
 **Repository:** https://github.com/johngoodspeed77/timesheet-app  
 **Branch:** `main`  
 **Previous tag:** `v0.3.1-production`
@@ -28,6 +28,15 @@
 | `7e5ff2a` | `deploy-hook` container + `deploy-quick.sh` |
 | `4a8329d` | **Save when dirty**; remove per-day Delete; cache bump |
 | `018bb4d` | `enable-remote-deploy.sh` + home deploy doc link |
+| `82394be`–`7dfd3f9` | deploy-hook host user + **202 async** deploy |
+
+### Remote deploy (VM101)
+
+| Check | Result (2026-07-01) |
+|-------|---------------------|
+| `GET /hooks/healthz` | ✅ **200** — `enabled: true` |
+| `POST /hooks/deploy` (no token) | ✅ **401** Unauthorized |
+| PWA assets live | ❌ still `app.js?v=28`, `styles.css?v=13` |
 
 ### Daily row UX (`4a8329d`)
 
@@ -72,11 +81,11 @@ node scripts/remote-deploy.mjs --target timesheet
 
 ## Not done / follow-up
 
-- Deploy `main` to VM101
-- Remote hook + Cloudflare `/hooks/*` → port 5189
+- **Deploy `main` to VM101** (hook works — run remote deploy with secret)
+- Fix VM106 deploy-hook (**502** on SupaDupaBase)
 - Data API date-range filters
 - Integration tests; license
 
 ## Last updated
 
-2026-06-27 — Save point v0.3.2-development: dirty Save UI, remote deploy hook (`4a8329d`, `018bb4d`).
+2026-07-01 — Remote deploy check: VM101 hook OK; PWA still on v28 until deploy runs.
