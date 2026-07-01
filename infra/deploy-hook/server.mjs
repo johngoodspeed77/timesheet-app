@@ -87,20 +87,25 @@ const server = createServer(async (req, res) => {
       deploying = true;
       const started = new Date().toISOString();
       console.log(`[deploy-hook] deploy started at ${started}`);
-      try {
-        const result = await runDeploy();
-        const ok = result.code === 0;
-        json(res, ok ? 200 : 500, {
-          ok,
-          started,
-          finished: new Date().toISOString(),
-          exit_code: result.code,
-          stdout: tail(result.stdout),
-          stderr: tail(result.stderr),
-        });
-      } finally {
-        deploying = false;
-      }
+      json(res, 202, {
+        ok: true,
+        accepted: true,
+        started,
+        message: 'Deploy started in background',
+      });
+      void (async () => {
+        try {
+          const result = await runDeploy();
+          console.log(`[deploy-hook] deploy finished code=${result.code}`);
+          if (result.code !== 0) {
+            console.error('[deploy-hook] stderr tail:', tail(result.stderr));
+          }
+        } catch (err) {
+          console.error('[deploy-hook] deploy failed', err);
+        } finally {
+          deploying = false;
+        }
+      })();
       return;
     }
 
