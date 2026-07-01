@@ -1,94 +1,82 @@
-# Save point — v0.3.1-production
+# Save point — v0.3.2-development
 
-**Date:** 2026-06-30  
-**Git tag:** `v0.3.1-production` (docs; app code unchanged since `v0.3.0-production` / `fcae809`)  
+**Date:** 2026-06-27  
+**Git commit:** `018bb4d` (main; UI in `4a8329d`)  
 **Repository:** https://github.com/johngoodspeed77/timesheet-app  
-**Branch:** `main`
+**Branch:** `main`  
+**Previous tag:** `v0.3.1-production`
 
 ## Milestone summary
 
-**Production PWA live** on VM101 at https://timesheet.whitelynx.co.nz, backed by SupaDupaBase on VM106 (Option B). Work/day-off/leave rows, mobile layout, sign-in reliability fixes, invite-only auth, week submit. **Boss email** now shows the employee as sender and uses **Fuzed Group** branding (SupaDupaBase mail-service `92c1e2b`, `fe60026`). Service worker **v29**.
+**Code on GitHub; VM101 deploy pending.** Daily row UX: **Save only when dirty** (hidden until user edits mode, times, or leave fields); **Delete removed**. Remote deploy hook for VM101 (`deploy-hook` + `enable-remote-deploy.sh`). Production VM still on last deployed `v0.3.1-production` assets until home PC deploy.
 
-## Production (live)
+## Production (live — last deployed)
 
 | Item | Value |
 |------|--------|
 | Public URL | https://timesheet.whitelynx.co.nz |
+| Last deployed | `v0.3.1-production` |
 | VM | `johngoodspeed@192.168.1.19` (VM101) |
 | Deploy path | `/opt/timesheet-app` |
 | Backend | https://supadupabase.whitelynx.co.nz (VM106) |
-| Auth mode | **Invite-only** — admin invites via SupaDupaBase |
-| Timesheet tag | `v0.3.0-production` (`fcae809`) — PWA assets below |
-| Backend tag | SupaDupaBase `v0.2.2-production` — mail + migration 009 |
 
-**Redeploy after code changes on VM101:**
+## What’s new on `main` (not yet on VM101)
 
-```bash
-cd /opt/timesheet-app
-git pull
-DOCKER_BUILDKIT=0 docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build
-```
+| Commit | Summary |
+|--------|---------|
+| `3344e7d` | Remove OAuth redirect URL handling (matches SupaDupaBase) |
+| `7e5ff2a` | `deploy-hook` container + `deploy-quick.sh` |
+| `4a8329d` | **Save when dirty**; remove per-day Delete; cache bump |
+| `018bb4d` | `enable-remote-deploy.sh` + home deploy doc link |
 
-**Redeploy mail after backend changes on VM106:**
+### Daily row UX (`4a8329d`)
 
-```bash
-cd ~/supadupabase
-git pull
-docker compose -f infra/docker-compose.yml --env-file .env up -d --build mail-service
-```
+- Save button **hidden** until row differs from saved baseline
+- Save positioned where Delete was (right side of row actions)
+- Delete button and `deleteDayEntry` removed
 
-## What works
-
-- Invite-only sign-in + persistent session (`lib/session.js`)
-- **Work / Day off / Leave** per day; leave types (paid + non-paid)
-- Mon–Fri auto-fill; Sat–Sun default Day off; weekend times blank until entered
-- OT shown as `8.00h + X.XXh OT`; lunch breakdown subtext
-- Mobile layout (Send button, day rows, settings) at 375px / 320px
-- Submit week → email + lock; unlock available
-- **Boss email** — `From: "Employee Name" <user@email>`, `Reply-To: user@email`; title **Fuzed Group- Employee Weekly Timesheet** (SMTP envelope still `SMTP_FROM` on VM106)
-- **↻ Refresh** on sign-in; `hours.js` cache-busted with `app.js`
-- Hours regression tests (`npm test`)
-
-## Cache versions (PWA — unchanged since v0.3.0)
+### Cache versions (this release)
 
 | Asset | Version |
 |-------|---------|
-| `app.js` | `?v=28` |
+| `app.js` | `?v=29` |
 | `hours.js` | `?v=28` |
-| `sw.js` | `?v=29` (`timesheet-app-v29`) |
-| `styles.css` | `?v=13` |
+| `styles.css` | `?v=14` |
+| `sw.js` | `?v=30` (`timesheet-app-v30`) |
 
-## Key changes (v0.3.0 → v0.3.1)
+## Deploy pending changes
 
-| Area | Summary |
-|------|---------|
-| Boss email From | Employee display name + login email (`mail-service` `submit.ts`) |
-| Boss email branding | Fuzed Group title in HTML + plain text (`TIMESHEET_EMAIL_TITLE`) |
-| Email subject | **Week ending** + Sunday date (Mon–Sun week) |
-| Backend | Migration `009_leave_entries.sql` on VM106; leave rows in email template |
+**At home (LAN):**
 
-## Key changes (v0.2.0 → v0.3.0)
+```bash
+ssh johngoodspeed@192.168.1.19
+cd /opt/timesheet-app
+git pull
+chmod +x infra/deploy-quick.sh
+DOCKER_BUILDKIT=0 docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build timesheet-app
+```
 
-| Area | Summary |
-|------|---------|
-| Leave | Migration 009; leave UI; day off as row mode |
-| Sign-in | Race fix, token snapshot, module cache bust |
-| UI | Hide time picker icon; OT display; mobile CSS pass |
-| Totals | Removed paid equivalent |
+See [SupaDupaBase HOME_PC_SETUP.md](https://github.com/johngoodspeed77/supadupabase/blob/main/infra/HOME_PC_SETUP.md).
 
-## Troubleshooting
+**Remote deploy (after hook setup):**
 
-- **Sign-in greyed out:** ↻ Refresh — stale SW `hours.js` vs `app.js`.
-- **Stale UI after deploy:** Hard refresh; SW network-first for HTML/JS.
-- **Submit fails:** Boss email in Settings + SMTP on VM106.
-- **Boss sees "via gmail.com":** Gmail may show relay hint when `From` domain is not a verified "Send mail as" alias; **Reply-To** still routes to the employee.
+```bash
+# from supadupabase repo
+node scripts/remote-deploy.mjs --target timesheet
+```
+
+## What still works (unchanged behaviour)
+
+- Invite-only sign-in, work/day-off/leave rows, week submit, Fuzed Group email
+- Mobile layout, ↻ Refresh, persistent session
 
 ## Not done / follow-up
 
+- Deploy `main` to VM101
+- Remote hook + Cloudflare `/hooks/*` → port 5189
 - Data API date-range filters
-- Integration tests
-- License
+- Integration tests; license
 
 ## Last updated
 
-2026-06-30
+2026-06-27 — Save point v0.3.2-development: dirty Save UI, remote deploy hook (`4a8329d`, `018bb4d`).

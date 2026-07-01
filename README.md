@@ -8,114 +8,76 @@ Weekly timesheet PWA — log start/finish times Mon–Sun, track overtime and le
 
 ## Status
 
-**Save point `v0.3.1-production`** (2026-06-30) — **production live.** Invite-only sign-in, work/day-off/leave rows, mobile layout, persistent login, week submit, **Fuzed Group** boss email branding with employee **From** / **Reply-To**.
+**Save point `v0.3.2-development`** (2026-06-27) — **production live** at last deploy `v0.3.1-production`. **`main` on GitHub** has dirty Save UI + remote deploy — **pending VM101 deploy**.
 
-| Done | Follow-up |
-|------|-----------|
-| PWA + tunnel `timesheet.whitelynx.co.nz` | Data API date-range filters |
-| Option B (`SDB_PROXY=0`, cross-origin API) | Integration tests |
-| Invite-only auth + admin invite links | Integration tests |
-| **Work / Day off / Leave** per day row | License |
-| Paid & non-paid leave types (8h full / 4h AM·PM) | |
-| Weekend rows default **Day off**; blank times until entered | |
-| Sign-in race + stale `hours.js` cache fixes | |
-| **Mobile-responsive** layout (375px / 320px tested) | |
-| **↻ Refresh** cache button on sign-in | |
-| Boss email **From** employee + Fuzed Group title (SupaDupaBase mail) | |
-| Subject uses **Week ending** + Sunday date | |
+| Done (on GitHub `main`) | Follow-up |
+|---------------------------|-----------|
+| PWA + tunnel, invite-only auth | **Deploy to VM101** (home PC) |
+| Work / day off / leave rows | Remote deploy hook setup |
+| **Save only when day row is dirty** | Data API date-range filters |
+| Delete button removed | Integration tests, license |
+| Remote deploy hook for VM101 | |
 
-Details: [SAVEPOINT.md](./SAVEPOINT.md) · Handoff: [AGENT_HANDOFF.md](./AGENT_HANDOFF.md) · **Home deploy:** [SupaDupaBase HOME_PC_SETUP.md](../supadupabase/infra/HOME_PC_SETUP.md)
+Details: [SAVEPOINT.md](./SAVEPOINT.md) · Handoff: [AGENT_HANDOFF.md](./AGENT_HANDOFF.md) · **Home deploy:** [SupaDupaBase HOME_PC_SETUP.md](https://github.com/johngoodspeed77/supadupabase/blob/main/infra/HOME_PC_SETUP.md)
 
-**Cursor workspace:** `E:\White Lynx Projects\Cursor\whitelynx.code-workspace`
-
-**Cache (production):** `app.js?v=28` · `hours.js?v=28` · `styles.css?v=13` · SW `timesheet-app-v29`
+**Cache (this release):** `app.js?v=29` · `hours.js?v=28` · `styles.css?v=14` · SW `timesheet-app-v30`
 
 ## Quick start (local)
 
 ### 1. Start SupaDupaBase
 
 ```bash
-cd ../Cursor/supadupabase
+cd ../supadupabase
 npm install && npm run build
-cp .env.example .env   # set ADMIN_EMAILS, AUTH_SECRET, SMTP_* for submit
+cp .env.example .env
 docker compose -f infra/docker-compose.dev.yml up -d
 npm run migrate
-npm run dev            # auth :3001, data :3002, mail :3004
+npm run dev
 ```
-
-Apply timesheet migrations through `009_leave_entries.sql` in the SupaDupaBase repo.
 
 ### 2. Start Timesheet App
 
 ```bash
-cd "E:/White Lynx Projects/Work Stuff/Timeshhet App"
+cd ../timesheet-app
 npm install
 npm run dev            # http://localhost:5180
 ```
 
-Open http://localhost:5180 — create a user via SupaDupaBase admin invite (production is invite-only), set boss email in Settings, log days, submit week (requires SMTP in SupaDupaBase `.env`).
-
 ### Tests
 
 ```bash
-npm test               # hours.js overtime, leave credits, row-mode defaults
+npm test
 ```
 
-## Deploy on VM101
+## Deploy
 
-See [infra/DEPLOY_VM101.md](./infra/DEPLOY_VM101.md). After code changes:
+See [infra/DEPLOY_VM101.md](./infra/DEPLOY_VM101.md) and [HOME_PC_SETUP.md](https://github.com/johngoodspeed77/supadupabase/blob/main/infra/HOME_PC_SETUP.md).
 
 ```bash
-cd /opt/timesheet-app
-git pull
-DOCKER_BUILDKIT=0 docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build
+cd /opt/timesheet-app && git pull && chmod +x infra/deploy-quick.sh
+DOCKER_BUILDKIT=0 docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build timesheet-app
 ```
-
-On VM101 the PWA is static-only; API calls go to VM106. `config.js` is generated at container start from `infra/.env`.
 
 ## What it does
 
 | Feature | Description |
 |---------|-------------|
-| Auth | Invite-only email/password via SupaDupaBase (`INVITE_ONLY=1` on VM106) |
-| Daily entry | **Work** (start/finish), **Day off**, or **Leave** per row; 30 min lunch deducted on work days |
-| Defaults | Mon–Fri → Work (8:00–16:30 clock, 8 h worked); Sat–Sun → Day off |
-| Leave | Non-paid leave; paid types (annual, sick, medical, bereavement) with full / AM / PM |
-| Overtime | >8 h/day OT; Sat 1.5×, Sun 2×; row shows **8.00h + X.XXh OT** when OT applies |
-| Week view | Mon–Sun navigation with worked / regular / OT / leave totals |
-| Settings | Boss email, display name, default start time, weekly reminder toggle |
-| Submit | Emails boss HTML timesheet (**Fuzed Group- Employee Weekly Timesheet**); **From** shows employee name + email; locks the week |
-| Reminders | Optional Sunday 3:00 PM NZ push (VAPID + cron on VM106) |
-| Refresh | **↻ Refresh** on sign-in — clears SW cache when app feels stuck |
-| Mobile | Full-width buttons, stacked day rows, no horizontal scroll on narrow phones |
+| Auth | Invite-only email/password via SupaDupaBase |
+| Daily entry | **Work**, **Day off**, or **Leave** per row; **Save** appears only after you change that day |
+| Defaults | Mon–Fri Work (8:00–16:30); Sat–Sun Day off |
+| Overtime | >8 h/day; Sat 1.5×, Sun 2× |
+| Submit | Fuzed Group HTML email to boss; locks week |
+| Mobile | Responsive layout; ↻ Refresh on sign-in |
 
 ## Backend dependency
 
-Timesheet App requires SupaDupaBase with:
-
-- Migrations through `009_leave_entries.sql` (`entry_type`, `leave_type`, `leave_duration`)
-- Tables whitelisted in data-api: `user_settings`, `time_entries`, `week_submissions`, `push_subscriptions`
-- `mail-service` running with SMTP configured
-- `INVITE_ONLY=1` in production `.env` (wired through `docker-compose.yml`)
-- VAPID keys for weekly push reminders (optional)
-
-## Config
-
-| Variable | Local default | VM101 (Docker) |
-|----------|---------------|----------------|
-| `window.__SDB_AUTH_URL` | `http://localhost:3001` | `https://supadupabase.whitelynx.co.nz` |
-| `window.__SDB_DATA_URL` | `http://localhost:3002` | `https://supadupabase.whitelynx.co.nz` |
-| `window.__SDB_MAIL_URL` | `http://localhost:3004` | `https://supadupabase.whitelynx.co.nz` |
-| `VAPID_PUBLIC_KEY` | — | In `infra/.env` |
+SupaDupaBase with migrations through `009_leave_entries.sql`, mail-service SMTP, `INVITE_ONLY=1`.
 
 ## Troubleshooting
 
-- **Sign-in greyed out / does nothing:** Tap **↻ Refresh** on the sign-in page. Often a stale service-worker `hours.js` vs `app.js` mismatch.
-- **Invalid password:** Production is invite-only — use the account your admin invited.
-- **Submit fails:** Check SupaDupaBase `SMTP_*` env vars and boss email in Settings.
-- **Boss sees "via gmail.com":** Normal when `From` domain is not a Gmail send-as alias; **Reply-To** is still the employee.
-- **Reminders:** Enable in Settings, allow notifications, install PWA; VM106 needs VAPID keys and Sunday cron.
-- **Layout looks wrong on phone:** Hard refresh after deploy; cache is `styles.css?v=13` / SW v29.
+- **Save not visible:** Edit the row first — Save only shows when there are unsaved changes.
+- **Stale UI after deploy:** Hard refresh (Ctrl+Shift+R) or ↻ Refresh on sign-in.
+- **Sign-in issues:** Production is invite-only; use ↻ Refresh if cache is stale.
 
 ## License
 

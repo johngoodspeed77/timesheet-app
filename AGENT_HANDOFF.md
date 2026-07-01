@@ -9,138 +9,77 @@
 **Workspace folder:** `E:\White Lynx Projects\Work Stuff\Timeshhet App`  
 **Cursor (both repos):** `E:\White Lynx Projects\Cursor\whitelynx.code-workspace`
 
-**Backend repo:** `E:\White Lynx Projects\Cursor\supadupabase` · GitHub: `johngoodspeed77/supadupabase`
-
+**Backend repo:** `johngoodspeed77/supadupabase`  
 **GitHub (this repo):** `johngoodspeed77/timesheet-app`
 
-## Current stage — v0.3.1-production (2026-06-30)
+## Current stage — v0.3.2-development (2026-06-27)
 
-**Timesheet (VM101):** https://timesheet.whitelynx.co.nz · deploy `/opt/timesheet-app` · PWA tag `v0.3.0-production` (`fcae809`)  
-**SupaDupaBase (VM106):** https://supadupabase.whitelynx.co.nz · `supadupabase@192.168.1.112` · tag `v0.2.2-production`
+**Timesheet (VM101):** https://timesheet.whitelynx.co.nz · last deployed `v0.3.1-production` · **`main` pending deploy**  
+**SupaDupaBase (VM106):** https://supadupabase.whitelynx.co.nz · `v0.3.0-development` on GitHub (`2ee9aae`)
 
-Browser loads PWA from VM101; auth/data/mail call VM106 directly (`SDB_PROXY=0`).  
-**Auth:** invite-only (no public sign-up UI; `INVITE_ONLY=1` on VM106).  
-**Save point:** `v0.3.1-production` · SW **v29** · `app.js?v=28` · `hours.js?v=28` · `styles.css?v=13`
+Browser loads PWA from VM101; auth/data/mail call VM106 (`SDB_PROXY=0`).  
+**Auth:** invite-only email/password (`INVITE_ONLY=1` on VM106).  
+**Save point:** `v0.3.2-development` · SW **v30** · `app.js?v=29` · `styles.css?v=14`
 
-### Completed since v0.3.0-production
+### Completed since v0.3.1-production
 
-- [x] **Boss email From** — `"Employee Name" <user@email>` + `Reply-To` (SupaDupaBase `92c1e2b`; SMTP envelope `SMTP_FROM`)
-- [x] **Fuzed Group branding** — email title **Fuzed Group- Employee Weekly Timesheet** (SupaDupaBase `fe60026`)
-- [x] **Email subject** — **Week ending** + Sunday date (SupaDupaBase mail-service)
+- [x] **Dirty Save UI** — Save only when row changed; Delete removed (`4a8329d`)
+- [x] **Remote deploy hook** — `deploy-hook`, `deploy-quick.sh`, `enable-remote-deploy.sh` (`7e5ff2a`, `018bb4d`)
+- [x] OAuth redirect handling removed (`3344e7d`)
 
-### Completed since v0.2.0-production
+### Completed (earlier)
 
-- [x] **Leave types** — work / day off / leave per row; paid leave (8h full / 4h AM·PM); migration `009_leave_entries.sql` on VM106
-- [x] **Day off** as top-level row mode (not under leave dropdown); Sat–Sun default Day off; Mon–Fri default Work
-- [x] **Weekend rows** blank until user enters times (no auto 8h on Sat/Sun)
-- [x] **Sign-in fixes** — session-restore race (`enterAppGeneration`, token snapshot in `lib/session.js`); cache-bust `hours.js?v=28`; removed fragile disabled submit gate
-- [x] **OT display** — `8.00h + 0.50h OT` (not combined total)
-- [x] **Time inputs** — native clock picker icon hidden (handwritten-style fields only)
-- [x] **Mobile layout pass** — full-width Send button, stacked day rows, 375px/320px verified
-- [x] Removed **paid equivalent** from week totals
-- [x] Hours tests extended (`rowModeForEntry`, `leaveTypesForSelect`)
-
-### Verified working (production)
-
-- Sign in (invited users), persistent session restore
-- Load week, auto-fill Mon–Fri, inline edit/save days, day off / leave rows, submit week
-- Real user: `jesse@fuzedgroup.com`
+- [x] Work / day off / leave rows; mobile layout; sign-in fixes; Fuzed Group boss email
+- [x] Hours tests (`npm test`)
 
 ### Not done / follow-up
 
-- [ ] **Data API date-range filters** — client loads all user entries
-- [ ] Integration tests (RLS lock, submit flow)
-- [ ] License
+- [ ] **Deploy `main` to VM101** — [HOME_PC_SETUP.md](https://github.com/johngoodspeed77/supadupabase/blob/main/infra/HOME_PC_SETUP.md)
+- [ ] Enable remote deploy hook + Cloudflare path rule
+- [ ] Data API date-range filters
+- [ ] Integration tests; license
 
 ## Confirmed decisions
 
 | Topic | Decision |
 |-------|----------|
-| Product name | **Timesheet App** |
-| Backend | SupaDupaBase (self-hosted) |
-| Users | Multiple — each logs in with own email |
-| Work week | Monday–Sunday |
-| Default week | Mon–Fri Work (8:00–16:30, 40 h worked); Sat–Sun Day off |
-| Row modes | **Work** · **Day off** · **Leave** (leave sub-types exclude day off) |
-| Daily entry | Work: start/finish + 30 min lunch; Leave: type + duration |
-| Overtime | >8h/day; Sat 1.5×, Sun 2×; display as 8h + OT hours |
-| Boss email | **Week ending** Sunday in subject; **From** = employee, **Reply-To** = employee login |
-| Week submit | Fuzed Group HTML email to boss, then **locks** week (unlock available) |
-| Hosting | VM101 PWA; backend VM106 (`supadupabase.whitelynx.co.nz`) |
-| UI stack | Vanilla HTML/CSS/JS — no React |
-| VM deploy | `DOCKER_BUILDKIT=0` required on VM101 |
-
-## Architecture (Option B)
-
-```
-Browser @ timesheet.whitelynx.co.nz (VM101 :5180)
-    → https://supadupabase.whitelynx.co.nz/auth|rest|mail (VM106)
-```
-
-Local dev: Timesheet `:5180` → `localhost:3001/3002/3004` via `config.js`.
+| Daily save UX | Save appears only when row is **dirty**; no per-day Delete |
+| Auth | Invite-only email/password (no Google OAuth) |
+| Hosting | VM101 PWA; backend VM106 |
+| VM deploy | `DOCKER_BUILDKIT=0` on VM101 |
 
 ## Key files
 
 | File | Purpose |
 |------|---------|
-| `app.js` | Main UI, auth, row modes, auto-fill, submit |
-| `hours.js` | Time/leave math, `rowModeForEntry`, `defaultRowModeForDate` |
-| `reminders.js` | Push subscribe + local Sunday reminder fallback |
-| `sw.js` | Cache v29, network-first JS/HTML, push handlers |
-| `lib/session.js` | Persistent auth + restore race guard (`clearTokensIfUnchanged`) |
-| `styles.css` | Cyan Hexagons theme; mobile breakpoints 640px / 380px |
-| `src/server.ts` | Static files; optional API proxy when `SDB_PROXY=1` |
-| `infra/docker-compose.yml` | VM101 — Timesheet only (no `infra_sdb`) |
-| `infra/entrypoint.sh` | Generates `config.js` with VM106 backend URL |
+| `app.js` | UI, dirty-state Save, row modes, submit |
+| `hours.js` | Time/leave math |
+| `lib/session.js` | Persistent auth |
+| `sw.js` | Cache v30 |
+| `infra/enable-remote-deploy.sh` | One-time VM101 hook setup |
+| `infra/deploy-quick.sh` | git pull + docker rebuild |
 
-## Database (SupaDupaBase)
-
-| Table | Purpose |
-|-------|---------|
-| `user_settings` | `boss_email`, `employee_name`, `default_start_time`, `weekly_reminder_enabled` |
-| `time_entries` | Per user per day: `entry_type` work/leave, `leave_type`, `leave_duration`, times |
-| `week_submissions` | Lock after email sent |
-| `push_subscriptions` | Web push endpoints for reminders |
-
-## VM101 ops cheat sheet
+## VM101 ops
 
 ```bash
-# SSH
 ssh johngoodspeed@192.168.1.19
-
-# Rebuild timesheet after git pull
-cd /opt/timesheet-app
-git pull
-DOCKER_BUILDKIT=0 docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build
-
-# Health
-curl http://192.168.1.19:5180/
-curl -s https://timesheet.whitelynx.co.nz/ | head
+cd /opt/timesheet-app && git pull && chmod +x infra/deploy-quick.sh
+DOCKER_BUILDKIT=0 docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build timesheet-app
 ```
 
-## Next work (recommended order)
+## Next work
 
-1. **Data API** — optional date-range filters to reduce payload size
-2. **Integration tests** — submit flow, RLS week lock, leave row shapes
-3. **License** — pick SPDX or proprietary
+1. Home PC deploy (section A in HOME_PC_SETUP.md)
+2. Remote hook setup (section B)
+3. Data API date filters
 
 ## Related docs
 
 - [README.md](./README.md)
 - [SAVEPOINT.md](./SAVEPOINT.md)
 - [infra/DEPLOY_VM101.md](./infra/DEPLOY_VM101.md)
-- [SupaDupaBase docs/STACK.md](../../Cursor/supadupabase/docs/STACK.md)
-- [SupaDupaBase AGENT_HANDOFF.md](../../Cursor/supadupabase/AGENT_HANDOFF.md)
-
-## VM106 mail redeploy
-
-```bash
-ssh supadupabase@192.168.1.112
-cd ~/supadupabase
-git pull
-docker compose -f infra/docker-compose.yml --env-file .env up -d --build mail-service
-```
+- [SupaDupaBase HOME_PC_SETUP.md](https://github.com/johngoodspeed77/supadupabase/blob/main/infra/HOME_PC_SETUP.md)
 
 ## Last updated
 
-2026-06-30 — v0.3.1-production: Fuzed Group boss email branding + employee From/Reply-To (SupaDupaBase mail-service).
+2026-06-27 — v0.3.2-development: dirty Save UI + remote deploy hook (`4a8329d`, `018bb4d`).
