@@ -31,6 +31,8 @@ import {
   normalizeDate,
   normalizeTime,
   parseTimeToHours,
+  populateQuarterHourSelect,
+  quarterHourSelectHtml,
   snapTimeToQuarterHour,
   STANDARD_WEEK_HOURS,
   toApiTime,
@@ -39,7 +41,7 @@ import {
   isWeekend,
   rowModeForEntry,
   leaveTypesForSelect,
-} from '/hours.js?v=28';
+} from '/hours.js?v=29';
 
 function apiBase(configured) {
   const value = (configured ?? '').trim();
@@ -96,6 +98,8 @@ const els = {
   settingsSuccess: document.getElementById('settings-success'),
   hardRefreshBtn: document.getElementById('hard-refresh-btn'),
 };
+
+populateQuarterHourSelect(els.defaultStart, DEFAULT_START_TIME);
 
 let enterAppGeneration = 0;
 
@@ -553,9 +557,9 @@ function updateWeekUI() {
           <option value="leave"${mode === 'leave' ? ' selected' : ''}>Leave</option>
         </select>
         <div class="day-work-fields"${workHiddenAttr}>
-          <input type="time" class="day-start" step="900" value="${start}" ${disabled} />
+          ${quarterHourSelectHtml('day-start', start, { disabled: Boolean(state.locked) })}
           <span class="day-time-sep" aria-hidden="true">–</span>
-          <input type="time" class="day-end" step="900" value="${end}" ${disabled} />
+          ${quarterHourSelectHtml('day-end', end, { disabled: Boolean(state.locked) })}
         </div>
         <div class="day-leave-fields"${leaveHiddenAttr}>
           <select class="day-leave-type" ${disabled} aria-label="Leave type">
@@ -758,26 +762,22 @@ els.daysList.addEventListener('change', (e) => {
   if (e.target.classList.contains('day-leave-duration')) {
     updateRowStats(row);
     updateRowDirtyState(row);
+    return;
   }
-});
-
-els.daysList.addEventListener('input', (e) => {
-  if (state.locked) return;
-  const row = e.target.closest('.day-row');
-  if (!row) return;
-
   if (e.target.classList.contains('day-start')) {
     if (
       row.dataset.hasEntry !== '1' &&
       row.dataset.finishEdited !== '1' &&
       !isWeekend(row.dataset.date)
     ) {
-      const endInput = row.querySelector('.day-end');
-      if (endInput) endInput.value = defaultFinishTime(e.target.value);
+      const endSelect = row.querySelector('.day-end');
+      if (endSelect) endSelect.value = defaultFinishTime(e.target.value);
     }
     updateRowStats(row);
     updateRowDirtyState(row);
-  } else if (e.target.classList.contains('day-end')) {
+    return;
+  }
+  if (e.target.classList.contains('day-end')) {
     row.dataset.finishEdited = '1';
     updateRowStats(row);
     updateRowDirtyState(row);

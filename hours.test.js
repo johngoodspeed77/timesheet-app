@@ -17,7 +17,10 @@ import {
   leaveCreditHours,
   leaveDurationLabel,
   leaveTypeLabel,
+  listQuarterHourTimes,
   parseTimeToHours,
+  quarterHourSelectHtml,
+  snapTimeToQuarterHour,
 } from './hours.js';
 
 describe('calcDay', () => {
@@ -111,6 +114,25 @@ describe('isWeekend', () => {
     assert.equal(isWeekend('2026-06-27'), true);
     assert.equal(isWeekend('2026-06-28'), true);
     assert.equal(isWeekend('2026-06-23'), false);
+  });
+});
+
+describe('quarter-hour times', () => {
+  it('lists 96 quarter-hour values from 00:00 to 23:45', () => {
+    const times = listQuarterHourTimes();
+    assert.equal(times.length, 96);
+    assert.equal(times[0], '00:00');
+    assert.equal(times[1], '00:15');
+    assert.equal(times[times.length - 1], '23:45');
+  });
+
+  it('select HTML snaps invalid values to nearest quarter hour', () => {
+    assert.equal(snapTimeToQuarterHour('08:07'), '08:00');
+    assert.equal(snapTimeToQuarterHour('08:08'), '08:15');
+    const html = quarterHourSelectHtml('day-start', '08:07');
+    assert.match(html, /<select[^>]*class="quarter-hour-time day-start"/);
+    assert.match(html, /<option value="08:00" selected>08:00<\/option>/);
+    assert.doesNotMatch(html, /selected>08:07</);
   });
 });
 

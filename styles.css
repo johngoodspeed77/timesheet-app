@@ -265,7 +265,7 @@ button.sm {
   gap: 0.35rem 0.5rem;
 }
 .day-weekday { flex-shrink: 0; }
-.day-line-primary input[type="time"] {
+.day-line-primary .quarter-hour-time {
   width: auto;
   min-width: 5.5rem;
   max-width: 7rem;
@@ -274,22 +274,12 @@ button.sm {
   padding: 0.35rem 0.5rem;
   min-height: 40px;
   font-size: 0.875rem;
-  appearance: none;
-  -webkit-appearance: none;
-}
-.day-line-primary input[type="time"]::-webkit-calendar-picker-indicator,
-input[type="time"]::-webkit-calendar-picker-indicator {
-  display: none;
-  -webkit-appearance: none;
-}
-input[type="time"] {
-  appearance: none;
-  -webkit-appearance: none;
 }
 .day-time-sep { color: var(--muted); font-weight: 400; flex-shrink: 0; }
 .day-mode,
 .day-leave-type,
-.day-leave-duration {
+.day-leave-duration,
+.quarter-hour-time {
   width: auto;
   min-width: 0;
   max-width: 100%;
@@ -495,7 +485,7 @@ h1, h2, h3 { margin-top: 0; line-height: 1.25; }
     gap: 0.35rem;
   }
 
-  .day-work-fields input[type="time"] {
+  .day-work-fields .quarter-hour-time {
     flex: 1 1 0;
     min-width: 0;
     max-width: none;

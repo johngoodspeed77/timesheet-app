@@ -70,6 +70,49 @@ export function snapTimeToQuarterHour(value) {
   return `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`;
 }
 
+const QUARTER_HOUR_MINUTES = [0, 15, 30, 45];
+
+/** All quarter-hour clock times in a day (96 values: 00:00 … 23:45). */
+export function listQuarterHourTimes() {
+  const times = [];
+  for (let h = 0; h < 24; h += 1) {
+    for (const m of QUARTER_HOUR_MINUTES) {
+      times.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+    }
+  }
+  return times;
+}
+
+function quarterHourOptionsHtml(selectedValue) {
+  const selected = snapTimeToQuarterHour(selectedValue) || listQuarterHourTimes()[0];
+  return listQuarterHourTimes()
+    .map((t) => `<option value="${t}"${t === selected ? ' selected' : ''}>${t}</option>`)
+    .join('');
+}
+
+/** Fill an existing &lt;select&gt; with quarter-hour options. */
+export function populateQuarterHourSelect(selectEl, value, { disabled = false } = {}) {
+  if (!selectEl) return;
+  const selected = snapTimeToQuarterHour(value) || listQuarterHourTimes()[0];
+  selectEl.innerHTML = quarterHourOptionsHtml(selected);
+  selectEl.value = selected;
+  selectEl.disabled = Boolean(disabled);
+}
+
+/** Build a quarter-hour &lt;select&gt; for day rows and settings. */
+export function quarterHourSelectHtml(classNames, value, { disabled = false, id = '' } = {}) {
+  const selected = snapTimeToQuarterHour(value) || listQuarterHourTimes()[0];
+  const classes = ['quarter-hour-time', classNames].filter(Boolean).join(' ');
+  const attrs = [
+    id ? `id="${id}"` : '',
+    `class="${classes}"`,
+    disabled ? 'disabled' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  return `<select ${attrs}>${quarterHourOptionsHtml(selected)}</select>`;
+}
+
 /** Paid/worked hours for a default shift. */
 export const SHIFT_HOURS = 8;
 

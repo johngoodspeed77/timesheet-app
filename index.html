@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#06080c" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>Timesheet App</title>
-    <link rel="stylesheet" href="/styles.css?v=14" />
+    <link rel="stylesheet" href="/styles.css?v=15" />
     <script src="/config.js"></script>
   </head>
   <body class="shell">
@@ -102,7 +102,7 @@
             <input id="boss-email" type="email" placeholder="boss@company.com" required />
           </label>
           <label>Default start time
-            <input id="default-start" type="time" step="900" required />
+            <select id="default-start" class="quarter-hour-time" required aria-label="Default start time"></select>
           </label>
           <p class="hint muted">Default 8:00 AM start — Mon–Fri auto-fill a 40 h/week (finish includes 30 min lunch). Change this to adjust future auto-filled weeks.</p>
           <label class="checkbox-row">
@@ -121,7 +121,7 @@
     </main>
 
     <script type="module">
-      import('/app.js?v=29').catch(() => {
+      import('/app.js?v=30').catch(() => {
         const err = document.getElementById('auth-error');
         if (err) {
           err.textContent = 'App failed to load — tap ↻ Refresh at the top of the page.';
