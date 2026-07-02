@@ -122,6 +122,15 @@ describe('defaultFinishTime', () => {
 });
 
 describe('work schedule', () => {
+  it('null settings defaults to full-time Mon–Fri 40 h week at 08:00', () => {
+    assert.deepEqual(workDaysFromSettings(null), [1, 2, 3, 4, 5]);
+    assert.equal(expectedWeeklyHours(null), 40);
+    const summary = typicalWeekSummary(null);
+    assert.match(summary, /40\.00 h worked/);
+    assert.match(summary, /Mon, Tue, Wed, Thu, Fri/);
+    assert.match(summary, /08:00–16:30/);
+  });
+
   const partTime = { work_days: [1, 3, 5], shift_hours: 8, default_start_time: '08:00:00' };
 
   it('Mon/Wed/Fri yields 3 work dates and 24 h week', () => {

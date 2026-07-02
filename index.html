@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#06080c" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>Timesheet App</title>
-    <link rel="stylesheet" href="/styles.css?v=16" />
+    <link rel="stylesheet" href="/styles.css?v=17" />
     <script src="/config.js"></script>
   </head>
   <body class="shell">
@@ -103,9 +103,9 @@
           </label>
           <fieldset class="work-schedule">
             <legend>Work schedule</legend>
-            <p class="hint muted">Choose which days you work and how many paid hours per day. New weeks auto-fill from this.</p>
+            <p class="hint muted">Default: Mon–Fri, 8 h/day (40 h/week), 8:00 AM start. Change days, hours, or start time below — new weeks auto-fill from your schedule.</p>
             <div class="schedule-presets" role="group" aria-label="Schedule presets">
-              <button type="button" class="ghost sm" data-schedule-preset="full_time">Full-time</button>
+              <button type="button" class="ghost sm" data-schedule-preset="full_time">Full-time (Mon–Fri, 40 h)</button>
               <button type="button" class="ghost sm" data-schedule-preset="part_time_4">Part-time (4 days)</button>
               <button type="button" class="ghost sm" data-schedule-preset="part_time_3">Part-time (3 days)</button>
             </div>
@@ -142,7 +142,7 @@
     </main>
 
     <script type="module">
-      import('/app.js?v=31').catch(() => {
+      import('/app.js?v=32').catch(() => {
         const err = document.getElementById('auth-error');
         if (err) {
           err.textContent = 'App failed to load — tap ↻ Refresh at the top of the page.';

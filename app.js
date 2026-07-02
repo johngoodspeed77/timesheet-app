@@ -46,7 +46,7 @@ import {
   weekStartFor,
   rowModeForEntry,
   leaveTypesForSelect,
-} from '/hours.js?v=30';
+} from '/hours.js?v=31';
 
 function apiBase(configured) {
   const value = (configured ?? '').trim();
@@ -1143,5 +1143,5 @@ document.addEventListener('visibilitychange', () => {
 });
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js?v=31').catch(() => {});
+  navigator.serviceWorker.register('/sw.js?v=33').catch(() => {});
 }

@@ -237,8 +237,16 @@ export function isWeekend(workDate) {
 
 /** Default row mode when there is no saved entry for this date. */
 export function defaultRowModeForDate(workDate, settings = null) {
-  if (settings) return isWorkDay(workDate, settings) ? 'work' : 'day_off';
-  return isWeekend(workDate) ? 'day_off' : 'work';
+  return isWorkDay(workDate, settings) ? 'work' : 'day_off';
+}
+
+/** Full-time default: Mon–Fri, 8 h/day (40 h/week), 08:00 start. */
+export function defaultScheduleSettings() {
+  return {
+    work_days: [...DEFAULT_WORK_DAYS],
+    shift_hours: SHIFT_HOURS,
+    default_start_time: DEFAULT_START_TIME,
+  };
 }
 
 /** Map a saved entry (or lack of one) to the Work / Day off / Leave dropdown. */
