@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#06080c" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>Timesheet App</title>
-    <link rel="stylesheet" href="/styles.css?v=15" />
+    <link rel="stylesheet" href="/styles.css?v=16" />
     <script src="/config.js"></script>
   </head>
   <body class="shell">
@@ -79,7 +79,7 @@
 
         <section class="card">
           <h3>Daily entries</h3>
-          <p class="hint muted">Mon–Fri default to Work; Sat–Sun default to Day off. Use Leave for non-paid or paid leave (full 8h / AM or PM 4h).</p>
+          <p id="days-list-hint" class="hint muted">Work days auto-fill from your schedule in Settings. Use Leave for paid or non-paid leave (8h full / 4h AM or PM).</p>
           <div id="days-list" class="days-list"></div>
         </section>
 
@@ -101,10 +101,31 @@
           <label>Boss email
             <input id="boss-email" type="email" placeholder="boss@company.com" required />
           </label>
-          <label>Default start time
-            <select id="default-start" class="quarter-hour-time" required aria-label="Default start time"></select>
-          </label>
-          <p class="hint muted">Default 8:00 AM start — Mon–Fri auto-fill a 40 h/week (finish includes 30 min lunch). Change this to adjust future auto-filled weeks.</p>
+          <fieldset class="work-schedule">
+            <legend>Work schedule</legend>
+            <p class="hint muted">Choose which days you work and how many paid hours per day. New weeks auto-fill from this.</p>
+            <div class="schedule-presets" role="group" aria-label="Schedule presets">
+              <button type="button" class="ghost sm" data-schedule-preset="full_time">Full-time</button>
+              <button type="button" class="ghost sm" data-schedule-preset="part_time_4">Part-time (4 days)</button>
+              <button type="button" class="ghost sm" data-schedule-preset="part_time_3">Part-time (3 days)</button>
+            </div>
+            <div class="work-days-grid" id="work-days">
+              <label class="checkbox-row"><input type="checkbox" name="work-day" value="1" checked /> Mon</label>
+              <label class="checkbox-row"><input type="checkbox" name="work-day" value="2" checked /> Tue</label>
+              <label class="checkbox-row"><input type="checkbox" name="work-day" value="3" checked /> Wed</label>
+              <label class="checkbox-row"><input type="checkbox" name="work-day" value="4" checked /> Thu</label>
+              <label class="checkbox-row"><input type="checkbox" name="work-day" value="5" checked /> Fri</label>
+              <label class="checkbox-row"><input type="checkbox" name="work-day" value="6" /> Sat</label>
+              <label class="checkbox-row"><input type="checkbox" name="work-day" value="0" /> Sun</label>
+            </div>
+            <label>Hours per work day
+              <select id="shift-hours" aria-label="Hours per work day"></select>
+            </label>
+            <label>Default start time
+              <select id="default-start" class="quarter-hour-time" required aria-label="Default start time"></select>
+            </label>
+            <p id="schedule-preview" class="hint muted schedule-preview"></p>
+          </fieldset>
           <label class="checkbox-row">
             <input id="weekly-reminder" type="checkbox" />
             Weekly reminder — Sunday 3:00 PM (NZ time)
@@ -121,7 +142,7 @@
     </main>
 
     <script type="module">
-      import('/app.js?v=30').catch(() => {
+      import('/app.js?v=31').catch(() => {
         const err = document.getElementById('auth-error');
         if (err) {
           err.textContent = 'App failed to load — tap ↻ Refresh at the top of the page.';

@@ -17,31 +17,36 @@ import {
   defaultFinishTime,
   defaultShiftTimes,
   DEFAULT_START_TIME,
+  DEFAULT_WORK_DAYS,
   entryTypeFor,
   formatDateRangeNz,
   formatHours,
   formatWeekday,
   isPaidLeaveType,
+  isWorkDay,
   LEAVE_DURATIONS,
   LEAVE_TYPES,
   leaveCreditHours,
   leaveDurationLabel,
   leaveTypeLabel,
+  listShiftHourOptions,
   LUNCH_HOURS,
   normalizeDate,
   normalizeTime,
   parseTimeToHours,
   populateQuarterHourSelect,
   quarterHourSelectHtml,
+  scheduleFromForm,
+  shiftHoursFromSettings,
   snapTimeToQuarterHour,
-  STANDARD_WEEK_HOURS,
   toApiTime,
-  weekdayDatesInWeek,
+  typicalWeekSummary,
+  workDatesInWeek,
+  workDaysFromSettings,
   weekStartFor,
-  isWeekend,
   rowModeForEntry,
   leaveTypesForSelect,
-} from '/hours.js?v=29';
+} from '/hours.js?v=30';
 
 function apiBase(configured) {
   const value = (configured ?? '').trim();
@@ -87,19 +92,78 @@ const els = {
   totalOt: document.getElementById('total-ot'),
   totalLeave: document.getElementById('total-leave'),
   weekHoursHint: document.getElementById('week-hours-hint'),
+  daysListHint: document.getElementById('days-list-hint'),
   submitWeek: document.getElementById('submit-week'),
   submitError: document.getElementById('submit-error'),
   submitSuccess: document.getElementById('submit-success'),
   employeeName: document.getElementById('employee-name'),
   bossEmail: document.getElementById('boss-email'),
   defaultStart: document.getElementById('default-start'),
+  workDays: document.getElementById('work-days'),
+  shiftHours: document.getElementById('shift-hours'),
+  schedulePreview: document.getElementById('schedule-preview'),
   weeklyReminder: document.getElementById('weekly-reminder'),
   settingsError: document.getElementById('settings-error'),
   settingsSuccess: document.getElementById('settings-success'),
   hardRefreshBtn: document.getElementById('hard-refresh-btn'),
 };
 
+const SCHEDULE_PRESETS = {
+  full_time: { work_days: [1, 2, 3, 4, 5], shift_hours: 8 },
+  part_time_4: { work_days: [1, 2, 3, 4], shift_hours: 8 },
+  part_time_3: { work_days: [1, 3, 5], shift_hours: 8 },
+};
+
+function initShiftHoursSelect() {
+  if (!els.shiftHours) return;
+  els.shiftHours.innerHTML = listShiftHourOptions()
+    .map((h) => {
+      const label = Number.isInteger(h) ? String(h) : h.toFixed(1);
+      const selected = h === 8 ? ' selected' : '';
+      return `<option value="${h}"${selected}>${label} h</option>`;
+    })
+    .join('');
+}
+
 populateQuarterHourSelect(els.defaultStart, DEFAULT_START_TIME);
+initShiftHoursSelect();
+updateSchedulePreview();
+
+function applyWorkDaysToForm(workDays) {
+  if (!els.workDays) return;
+  const set = new Set(workDays);
+  els.workDays.querySelectorAll('input[name="work-day"]').forEach((cb) => {
+    cb.checked = set.has(Number(cb.value));
+  });
+}
+
+function readWorkDaysFromForm() {
+  if (!els.workDays) return [...DEFAULT_WORK_DAYS];
+  return [...els.workDays.querySelectorAll('input[name="work-day"]:checked')]
+    .map((cb) => Number(cb.value))
+    .sort((a, b) => a - b);
+}
+
+function buildScheduleFromForm() {
+  return scheduleFromForm(
+    els.defaultStart?.value ?? DEFAULT_START_TIME,
+    readWorkDaysFromForm(),
+    Number(els.shiftHours?.value ?? 8),
+  );
+}
+
+function updateSchedulePreview() {
+  if (!els.schedulePreview) return;
+  els.schedulePreview.textContent = typicalWeekSummary(buildScheduleFromForm());
+}
+
+function applySchedulePreset(presetKey) {
+  const preset = SCHEDULE_PRESETS[presetKey];
+  if (!preset) return;
+  applyWorkDaysToForm(preset.work_days);
+  if (els.shiftHours) els.shiftHours.value = String(preset.shift_hours);
+  updateSchedulePreview();
+}
 
 let enterAppGeneration = 0;
 
@@ -190,7 +254,7 @@ function isCurrentWeekLocked() {
   );
 }
 
-/** Create Mon–Fri entries from default shift times when missing (Sat/Sun stay blank). */
+/** Create work-day entries from schedule when missing. */
 async function ensureDefaultWeekdayEntries() {
   if (isCurrentWeekLocked() || !state.user) return;
 
@@ -199,7 +263,7 @@ async function ensureDefaultWeekdayEntries() {
   const endTime = toApiTime(end);
   if (!startTime || !endTime) return;
 
-  const toCreate = weekdayDatesInWeek(state.weekStart)
+  const toCreate = workDatesInWeek(state.weekStart, state.settings)
     .filter((date) => !state.entries.some((e) => normalizeDate(e.work_date) === date))
     .map((work_date) => ({
       user_id: state.user.id,
@@ -237,7 +301,7 @@ function defaultTimesForDate(workDate) {
       end: normalizeTime(entry.end_time),
     };
   }
-  if (isWeekend(workDate)) {
+  if (!isWorkDay(workDate, state.settings)) {
     return { start: '', end: '' };
   }
   return defaultShiftTimes(state.settings);
@@ -518,18 +582,19 @@ function updateWeekUI() {
   els.totalOt.textContent = formatHours(week.totalOt);
   if (els.totalLeave) els.totalLeave.textContent = formatHours(week.totalLeaveHours);
 
-  const defaultStart = normalizeTime(state.settings?.default_start_time) || DEFAULT_START_TIME;
-  const { end: shiftEnd } = defaultShiftTimes(state.settings);
   if (els.weekHoursHint) {
-    els.weekHoursHint.textContent =
-      `Mon–Fri default to Work (${defaultStart}–${shiftEnd}, ${formatHours(STANDARD_WEEK_HOURS)} h week). Sat–Sun default to Day off. Leave covers paid and non-paid types (8h full / 4h AM or PM).`;
+    els.weekHoursHint.textContent = `${typicalWeekSummary(state.settings)}. Leave: paid types 8h full / 4h AM or PM.`;
+  }
+  if (els.daysListHint) {
+    els.daysListHint.textContent =
+      'Work days auto-fill from your schedule in Settings. Use Leave for paid or non-paid leave (8h full / 4h AM or PM).';
   }
 
   els.daysList.innerHTML = '';
   for (let i = 0; i < 7; i += 1) {
     const date = addDays(state.weekStart, i);
     const entry = state.entries.find((e) => normalizeDate(e.work_date) === date);
-    const mode = rowModeForEntry(entry, date);
+    const mode = rowModeForEntry(entry, date, state.settings);
     const leaveType =
       entry?.leave_type && entry.leave_type !== 'day_off'
         ? entry.leave_type
@@ -627,11 +692,23 @@ async function loadData() {
 
 function applySettingsToState(row) {
   state.settings = row;
-  if (!row) return;
-  els.employeeName.value = row.employee_name ?? '';
-  els.bossEmail.value = row.boss_email ?? '';
-  els.defaultStart.value = normalizeTime(row.default_start_time) || DEFAULT_START_TIME;
-  els.weeklyReminder.checked = Boolean(row.weekly_reminder_enabled);
+  const workDays = workDaysFromSettings(row);
+  applyWorkDaysToForm(workDays);
+  if (els.shiftHours) {
+    els.shiftHours.value = String(shiftHoursFromSettings(row));
+  }
+  if (row) {
+    els.employeeName.value = row.employee_name ?? '';
+    els.bossEmail.value = row.boss_email ?? '';
+    els.defaultStart.value = normalizeTime(row.default_start_time) || DEFAULT_START_TIME;
+    els.weeklyReminder.checked = Boolean(row.weekly_reminder_enabled);
+  } else {
+    els.employeeName.value = '';
+    els.bossEmail.value = '';
+    els.defaultStart.value = DEFAULT_START_TIME;
+    els.weeklyReminder.checked = false;
+  }
+  updateSchedulePreview();
 }
 
 async function enterApp(freshSession = null) {
@@ -768,10 +845,15 @@ els.daysList.addEventListener('change', (e) => {
     if (
       row.dataset.hasEntry !== '1' &&
       row.dataset.finishEdited !== '1' &&
-      !isWeekend(row.dataset.date)
+      isWorkDay(row.dataset.date, state.settings)
     ) {
       const endSelect = row.querySelector('.day-end');
-      if (endSelect) endSelect.value = defaultFinishTime(e.target.value);
+      if (endSelect) {
+        endSelect.value = defaultFinishTime(
+          e.target.value,
+          shiftHoursFromSettings(state.settings),
+        );
+      }
     }
     updateRowStats(row);
     updateRowDirtyState(row);
@@ -875,9 +957,19 @@ document.getElementById('settings-form').addEventListener('submit', async (e) =>
   showMsg(els.settingsError, '');
   showMsg(els.settingsSuccess, '');
 
+  const workDays = readWorkDaysFromForm();
+  if (!workDays.length) {
+    return showMsg(els.settingsError, 'Choose at least one work day');
+  }
+
   const defaultStartTime = toApiTime(snapTimeToQuarterHour(els.defaultStart.value));
   if (!defaultStartTime) {
     return showMsg(els.settingsError, 'Choose a default start time');
+  }
+
+  const shiftHours = Number(els.shiftHours?.value ?? 8);
+  if (!Number.isFinite(shiftHours) || shiftHours <= 0) {
+    return showMsg(els.settingsError, 'Choose valid hours per work day');
   }
 
   const payload = {
@@ -886,6 +978,8 @@ document.getElementById('settings-form').addEventListener('submit', async (e) =>
     employee_name: els.employeeName.value.trim() || null,
     default_start_time: defaultStartTime,
     weekly_reminder_enabled: els.weeklyReminder.checked,
+    work_days: workDays,
+    shift_hours: shiftHours,
   };
 
   let result;
@@ -902,8 +996,7 @@ document.getElementById('settings-form').addEventListener('submit', async (e) =>
     applySettingsToState(savedRow);
   } else {
     state.settings = { ...payload };
-    els.defaultStart.value = normalizeTime(payload.default_start_time);
-    els.weeklyReminder.checked = payload.weekly_reminder_enabled;
+    applySettingsToState(state.settings);
   }
 
   try {
@@ -922,7 +1015,22 @@ document.getElementById('settings-form').addEventListener('submit', async (e) =>
   }
 
   showMsg(els.settingsSuccess, 'Settings saved');
+  try {
+    await refreshWeekView();
+  } catch (err) {
+    showMsg(els.settingsError, err.message ?? 'Settings saved but week could not refresh');
+  }
 });
+
+document.querySelectorAll('[data-schedule-preset]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    applySchedulePreset(btn.dataset.schedulePreset);
+  });
+});
+
+els.workDays?.addEventListener('change', updateSchedulePreview);
+els.shiftHours?.addEventListener('change', updateSchedulePreview);
+els.defaultStart?.addEventListener('change', updateSchedulePreview);
 
 function currentSubmission() {
   return state.submissions.find(
@@ -1035,5 +1143,5 @@ document.addEventListener('visibilitychange', () => {
 });
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js?v=30').catch(() => {});
+  navigator.serviceWorker.register('/sw.js?v=31').catch(() => {});
 }

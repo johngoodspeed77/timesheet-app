@@ -133,9 +133,42 @@ export function addHoursToTime(timeStr, hours) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-/** Default finish on the clock: start + shift + lunch (8h worked after 30 min lunch). */
-export function defaultFinishTime(startStr) {
-  return addHoursToTime(startStr, SHIFT_HOURS + LUNCH_HOURS);
+/** Default Mon–Fri work days (JS getDay: 0=Sun … 6=Sat). */
+export const DEFAULT_WORK_DAYS = [1, 2, 3, 4, 5];
+
+/** Paid hours per work day options in Settings (0.5 h steps). */
+export function listShiftHourOptions() {
+  const opts = [];
+  for (let h = 4; h <= 12; h += 0.5) {
+    opts.push(h);
+  }
+  return opts;
+}
+
+export function workDaysFromSettings(settings) {
+  const raw = settings?.work_days;
+  if (Array.isArray(raw) && raw.length > 0) {
+    return [...new Set(raw.map(Number).filter((d) => d >= 0 && d <= 6))].sort(
+      (a, b) => a - b,
+    );
+  }
+  return [...DEFAULT_WORK_DAYS];
+}
+
+export function shiftHoursFromSettings(settings) {
+  const n = Number(settings?.shift_hours);
+  if (Number.isFinite(n) && n > 0) return n;
+  return SHIFT_HOURS;
+}
+
+export function isWorkDay(workDate, settings) {
+  const dow = new Date(`${normalizeDate(workDate)}T12:00:00`).getDay();
+  return workDaysFromSettings(settings).includes(dow);
+}
+
+/** Default finish on the clock: start + shift + lunch. */
+export function defaultFinishTime(startStr, shiftHours = SHIFT_HOURS) {
+  return addHoursToTime(startStr, shiftHours + LUNCH_HOURS);
 }
 
 export function defaultShiftTimes(settings, fallbackStart) {
@@ -143,7 +176,8 @@ export function defaultShiftTimes(settings, fallbackStart) {
     normalizeTime(settings?.default_start_time) ||
     normalizeTime(fallbackStart) ||
     DEFAULT_START_TIME;
-  return { start, end: defaultFinishTime(start) };
+  const shiftHours = shiftHoursFromSettings(settings);
+  return { start, end: defaultFinishTime(start, shiftHours) };
 }
 
 export function weekdayDatesInWeek(weekStart) {
@@ -152,6 +186,44 @@ export function weekdayDatesInWeek(weekStart) {
     dates.push(addDays(weekStart, i));
   }
   return dates;
+}
+
+/** Dates in a calendar week that match the user's work schedule. */
+export function workDatesInWeek(weekStart, settings) {
+  const dates = [];
+  for (let i = 0; i < 7; i += 1) {
+    const date = addDays(weekStart, i);
+    if (isWorkDay(date, settings)) dates.push(date);
+  }
+  return dates;
+}
+
+export function expectedWeeklyHours(settings) {
+  return workDaysFromSettings(settings).length * shiftHoursFromSettings(settings);
+}
+
+export function workDayLabels(settings) {
+  return workDaysFromSettings(settings).map((d) => DAY_NAMES[d]);
+}
+
+export function typicalWeekSummary(settings) {
+  const workDays = workDaysFromSettings(settings);
+  if (workDays.length === 0) {
+    return 'No work days selected — choose work days in Settings.';
+  }
+  const { start, end } = defaultShiftTimes(settings);
+  const weeklyHours = expectedWeeklyHours(settings);
+  const dayNames = workDayLabels(settings).join(', ');
+  return `Typical week: ${formatHours(weeklyHours)} h worked · ${dayNames} · ${start}–${end} (incl. ${formatHours(LUNCH_HOURS)} h lunch)`;
+}
+
+/** Build settings object from form fields for preview (unsaved). */
+export function scheduleFromForm(defaultStartTime, workDays, shiftHours) {
+  return {
+    default_start_time: defaultStartTime,
+    work_days: workDays,
+    shift_hours: shiftHours,
+  };
 }
 
 export function formatHours(n) {
@@ -164,13 +236,14 @@ export function isWeekend(workDate) {
 }
 
 /** Default row mode when there is no saved entry for this date. */
-export function defaultRowModeForDate(workDate) {
+export function defaultRowModeForDate(workDate, settings = null) {
+  if (settings) return isWorkDay(workDate, settings) ? 'work' : 'day_off';
   return isWeekend(workDate) ? 'day_off' : 'work';
 }
 
 /** Map a saved entry (or lack of one) to the Work / Day off / Leave dropdown. */
-export function rowModeForEntry(entry, workDate) {
-  if (!entry) return defaultRowModeForDate(workDate);
+export function rowModeForEntry(entry, workDate, settings = null) {
+  if (!entry) return defaultRowModeForDate(workDate, settings);
   if (entryTypeFor(entry) === 'work') return 'work';
   if (entry.leave_type === 'day_off') return 'day_off';
   return 'leave';

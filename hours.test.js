@@ -8,10 +8,14 @@ import {
   calcLeaveDay,
   calcWeek,
   defaultFinishTime,
+  defaultRowModeForDate,
+  defaultShiftTimes,
+  expectedWeeklyHours,
   formatHours,
   isPaidLeaveType,
   isWeekend,
-  defaultRowModeForDate,
+  isWorkDay,
+  listShiftHourOptions,
   rowModeForEntry,
   leaveTypesForSelect,
   leaveCreditHours,
@@ -20,7 +24,11 @@ import {
   listQuarterHourTimes,
   parseTimeToHours,
   quarterHourSelectHtml,
+  shiftHoursFromSettings,
   snapTimeToQuarterHour,
+  typicalWeekSummary,
+  workDatesInWeek,
+  workDaysFromSettings,
 } from './hours.js';
 
 describe('calcDay', () => {
@@ -107,6 +115,44 @@ describe('defaultFinishTime', () => {
   it('08:00 start → 16:30 finish on clock', () => {
     assert.equal(defaultFinishTime('08:00'), '16:30');
   });
+
+  it('6 h shift from 09:00 → 15:30 finish', () => {
+    assert.equal(defaultFinishTime('09:00', 6), '15:30');
+  });
+});
+
+describe('work schedule', () => {
+  const partTime = { work_days: [1, 3, 5], shift_hours: 8, default_start_time: '08:00:00' };
+
+  it('Mon/Wed/Fri yields 3 work dates and 24 h week', () => {
+    const dates = workDatesInWeek('2026-06-22', partTime);
+    assert.equal(dates.length, 3);
+    assert.deepEqual(dates, ['2026-06-22', '2026-06-24', '2026-06-26']);
+    assert.equal(expectedWeeklyHours(partTime), 24);
+  });
+
+  it('Saturday in work_days defaults row to work', () => {
+    const satWorker = { work_days: [6], shift_hours: 8 };
+    assert.equal(defaultRowModeForDate('2026-06-27', satWorker), 'work');
+    assert.equal(isWorkDay('2026-06-27', satWorker), true);
+  });
+
+  it('non-work day defaults to day off', () => {
+    assert.equal(defaultRowModeForDate('2026-06-23', partTime), 'day_off');
+  });
+
+  it('typicalWeekSummary describes part-time pattern', () => {
+    const summary = typicalWeekSummary(partTime);
+    assert.match(summary, /24\.00 h worked/);
+    assert.match(summary, /Mon, Wed, Fri/);
+  });
+
+  it('listShiftHourOptions spans 4–12 h in half-hour steps', () => {
+    const opts = listShiftHourOptions();
+    assert.equal(opts[0], 4);
+    assert.equal(opts[opts.length - 1], 12);
+    assert.equal(opts.length, 17);
+  });
 });
 
 describe('isWeekend', () => {
@@ -144,8 +190,9 @@ describe('row mode defaults', () => {
   });
 
   it('maps saved entries to the correct row mode', () => {
-    assert.equal(rowModeForEntry(null, '2026-06-23'), 'work');
-    assert.equal(rowModeForEntry(null, '2026-06-27'), 'day_off');
+    const fullTime = { work_days: [1, 2, 3, 4, 5], shift_hours: 8 };
+    assert.equal(rowModeForEntry(null, '2026-06-23', fullTime), 'work');
+    assert.equal(rowModeForEntry(null, '2026-06-27', fullTime), 'day_off');
     assert.equal(
       rowModeForEntry({ entry_type: 'leave', leave_type: 'day_off' }, '2026-06-23'),
       'day_off',

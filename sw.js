@@ -1,11 +1,11 @@
-const CACHE = 'timesheet-app-v31';
+const CACHE = 'timesheet-app-v32';
 const ASSETS = [
   '/',
   '/index.html',
-  '/app.js?v=30',
-  '/hours.js?v=29',
+  '/app.js?v=31',
+  '/hours.js?v=30',
   '/reminders.js',
-  '/styles.css?v=15',
+  '/styles.css?v=16',
   '/manifest.webmanifest',
 ];
 
