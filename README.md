@@ -8,18 +8,18 @@ Weekly timesheet PWA — log start/finish times Mon–Sun, track overtime and le
 
 ## Status
 
-**Save point `v0.3.2-development`** (2026-07-01) — **`main` at `b5168b9` on GitHub.** Production still on `v0.3.1-production` (`app.js?v=28`) until home deploy.
+**Save point `v0.4.0-production`** (2026-07-02) — **`main` at `369f891`**, deployed to VM101.
 
-| Done (on GitHub `main`) | Follow-up |
-|---------------------------|-----------|
-| PWA + tunnel, invite-only auth | **Deploy to VM101** (hook works; PWA still v28) |
-| **Remote deploy hook on VM101** ✅ | Fix VM106 hook (502) |
-| **Save only when day row is dirty** | Data API date-range filters |
-| Delete button removed | Integration tests, license |
+| Feature | Status |
+|---------|--------|
+| Dirty Save UI (no Delete) | ✅ Live |
+| Quarter-hour time selects (iOS PWA) | ✅ Live |
+| Work schedule settings (part-time) | ✅ Live |
+| Remote deploy hook (VM101) | ✅ Live |
 
-Details: [SAVEPOINT.md](./SAVEPOINT.md) · Handoff: [AGENT_HANDOFF.md](./AGENT_HANDOFF.md) · **Deploy at home:** [HOME_PC_SETUP.md](https://github.com/johngoodspeed77/supadupabase/blob/main/infra/HOME_PC_SETUP.md#quick-checklist--run-when-you-get-home)
+Details: [SAVEPOINT.md](./SAVEPOINT.md) · Handoff: [AGENT_HANDOFF.md](./AGENT_HANDOFF.md) · Deploy: [HOME_PC_SETUP.md](https://github.com/johngoodspeed77/supadupabase/blob/main/infra/HOME_PC_SETUP.md)
 
-**Cache (this release):** `app.js?v=29` · `hours.js?v=28` · `styles.css?v=14` · SW `timesheet-app-v30`
+**Cache:** `app.js?v=32` · `hours.js?v=31` · `styles.css?v=17` · SW `timesheet-app-v33`
 
 ## Quick start (local)
 
@@ -54,7 +54,7 @@ See [infra/DEPLOY_VM101.md](./infra/DEPLOY_VM101.md) and [HOME_PC_SETUP.md](http
 
 ```bash
 cd /opt/timesheet-app && git pull && chmod +x infra/deploy-quick.sh
-DOCKER_BUILDKIT=0 docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build timesheet-app
+bash infra/deploy-quick.sh
 ```
 
 ## What it does
@@ -63,20 +63,22 @@ DOCKER_BUILDKIT=0 docker compose -f infra/docker-compose.yml --env-file infra/.e
 |---------|-------------|
 | Auth | Invite-only email/password via SupaDupaBase |
 | Daily entry | **Work**, **Day off**, or **Leave** per row; **Save** appears only after you change that day |
-| Defaults | Mon–Fri Work (8:00–16:30); Sat–Sun Day off |
+| Work schedule | Settings: work days, hours/day, start time (default Mon–Fri 40 h/week @ 08:00) |
+| Time entry | Quarter-hour dropdowns (15 min steps) — works on iPhone Chrome PWA |
 | Overtime | >8 h/day; Sat 1.5×, Sun 2× |
 | Submit | Fuzed Group HTML email to boss; locks week |
 | Mobile | Responsive layout; ↻ Refresh on sign-in |
 
 ## Backend dependency
 
-SupaDupaBase with migrations through `009_leave_entries.sql`, mail-service SMTP, `INVITE_ONLY=1`.
+SupaDupaBase with migrations through `010_work_schedule.sql`, mail-service SMTP, `INVITE_ONLY=1`.
 
 ## Troubleshooting
 
 - **Save not visible:** Edit the row first — Save only shows when there are unsaved changes.
 - **Stale UI after deploy:** Hard refresh (Ctrl+Shift+R) or ↻ Refresh on sign-in.
 - **Sign-in issues:** Production is invite-only; use ↻ Refresh if cache is stale.
+- **Part-time hours:** Settings → Work schedule — tick your days and save.
 
 ## License
 
