@@ -1,4 +1,4 @@
-const CACHE = 'timesheet-app-v33';
+const CACHE = 'timesheet-app-v34';
 const ASSETS = [
   '/',
   '/index.html',
